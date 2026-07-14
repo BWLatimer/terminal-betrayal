@@ -1,0 +1,3 @@
+[[Exploration]]
+[[Quest]]
+[[Haunt]]

@@ -1,0 +1,5 @@
+[Class] # room or item or location or character etc.
+# indentify card
+name=""
+#provide options based on class
+# ex) attribute modifiers, how many doors, trap placement etc.

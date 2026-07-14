@@ -1,0 +1,3 @@
+- event driven
+- phase modified: explore, quest, haunt
+- modularity first: characters, attributes, items, locations, monsters, quests, haunts

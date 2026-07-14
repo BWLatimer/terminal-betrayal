@@ -1,0 +1,11 @@
+[package]
+name = "terminal-betrayal"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+ratatui = "0.29"
+crossterm = "0.28"
+rand = "0.8"
+anyhow = "1"
+thiserror= "1"
