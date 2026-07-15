@@ -26,19 +26,24 @@ fn main() {
     let mut current_room: RoomId = RoomId(0); //start at the entrance
     
     loop {
-        house.room(current_room);
-        println!("Location: {:?}", current_room);
-        // hint: house.room(current_room) gives you a &Room
+        let room = house.room(current_room);
+        println!("Location: {}", room.name);
+        print!("Exits: ");
+        for (dir, _) in &room.exits {
+            print!("{:?} ", dir);
+        }
+        println!();
         print!(">");
         io::stdout().flush().unwrap();
         let mut input = String::new();
         io::stdin().read_line(&mut input).unwrap();
         let input = input.trim();
         if input == "quit" {
-            break;
-            }
-        };
-    }
+           break;
+        } 
+    };
+    
+}
         // TODO: parse input into a Direction, look up whether current_room
         // has an exit in that direction, and if so update current_room
 
