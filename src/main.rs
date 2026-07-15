@@ -41,9 +41,32 @@ fn main() {
         if input == "quit" {
            break;
         } 
-    };
-    
+
+        let dir = match input.to_lowercase().as_str() {
+            "n" | "north" => Some(Direction::North),
+            "s" | "south" => Some(Direction::South),
+            "e" | "east" => Some(Direction::East),
+            "w" | "west" => Some(Direction::West),
+            "q" => break,
+            _ => None,
+        };
+        match dir {
+            None => {
+                println!("Oops! That's not an available direction. Please try n, s, e, w, or q");
+            }
+            Some(d) => {
+                let found = room.exits.iter().find(|(exit_dir, _)| *exit_dir == d);
+                match found {
+                    Some((_, target)) => {
+                        current_room = *target;
+                    }
+                
+                    None => {
+                        println!("I think that's a wall... Maybe try a different direction?");
+                    }
+                }
+            }
+        }
+    }
 }
-        // TODO: parse input into a Direction, look up whether current_room
-        // has an exit in that direction, and if so update current_room
 
