@@ -24,10 +24,10 @@ fn build_house() -> House {
 fn main() {
     let house = build_house();
     let mut current_room: RoomId = RoomId(0); //start at the entrance
-
+    
     loop {
-        // TODO: print current room name + list its exits
-        println!("Location: {}", house.room(&Room));
+        house.room(current_room);
+        println!("Location: {:?}", current_room);
         // hint: house.room(current_room) gives you a &Room
         print!(">");
         io::stdout().flush().unwrap();
@@ -36,9 +36,9 @@ fn main() {
         let input = input.trim();
         if input == "quit" {
             break;
-        }
+            }
+        };
     }
-}
         // TODO: parse input into a Direction, look up whether current_room
         // has an exit in that direction, and if so update current_room
 
