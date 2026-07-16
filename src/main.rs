@@ -6,27 +6,28 @@ use std::io::{self, Write};
 fn build_house() -> House {
     let mut house = House::new();
 
-    // TODO: add_room for Entrance (0), Kitchen (1), Library(2), Basement(3)
-    House::add_room(&mut house, RoomId(0), &"Entrancece");
+    //add_rooms manually for Entrance (0), Kitchen (1), Library(2), Basement(3)
+    House::add_room(&mut house, RoomId(0), &"Entrance");
     House::add_room(&mut house, RoomId(1), &"Kitchen");
     House::add_room(&mut house, RoomId(2), &"Library");
     House::add_room(&mut house, RoomId(3), &"Basement");
 
-    // TODO: connect them with Direction::North/South/East/West
-    House::connect(&mut house, RoomId(0), Direction::North, RoomId(1));
-    House::connect(&mut house, RoomId(1), Direction::East, RoomId(2));
-    House::connect(&mut house, RoomId(2), Direction::South, RoomId(3));
-    House::connect(&mut house, RoomId(3), Direction::West, RoomId(0));
+    // connect them manually with Direction::North/South/East/West (reversible)
+    House::connect_two_way(&mut house, RoomId(0), Direction::North, RoomId(1));
+    House::connect_two_way(&mut house, RoomId(1), Direction::East, RoomId(2));
+    House::connect_two_way(&mut house, RoomId(2), Direction::South, RoomId(3));
+    House::connect_two_way(&mut house, RoomId(3), Direction::West, RoomId(0));
 
     house
 }
 
 fn main() {
     let house = build_house();
-    let mut current_room: RoomId = RoomId(0); //start at the entrance
+    let mut current_room: RoomId = RoomId(0);
     
     loop {
-        let room = house.room(current_room);
+        let room = house.room(current_room)
+            .expect("room should always reference a valid room");
         println!("Location: {}", room.name);
         print!("Exits: ");
         for (dir, _) in &room.exits {
