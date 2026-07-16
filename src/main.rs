@@ -3,28 +3,13 @@ mod house;
 use house::{House, RoomId, Direction};
 mod player;
 use player::Player;
+mod game_state;
+use game_state::GameState;
 use std::io::{self, Write};
 
-fn build_house() -> House {
-    let mut house = House::new();
 
-    //add_rooms manually for Entrance (0), Kitchen (1), Library(2), Basement(3)
-    House::add_room(&mut house, RoomId(0), &"Entrance");
-    House::add_room(&mut house, RoomId(1), &"Kitchen");
-    House::add_room(&mut house, RoomId(2), &"Library");
-    House::add_room(&mut house, RoomId(3), &"Basement");
-
-    // connect them manually with Direction::North/South/East/West (reversible)
-    House::connect_two_way(&mut house, RoomId(0), Direction::North, RoomId(1))
-        .expect("Failed to connect Entrance and Kitchen");
-    House::connect_two_way(&mut house, RoomId(1), Direction::East, RoomId(2))
-        .expect("Failed to connect Kitchen and Library");
-    House::connect_two_way(&mut house, RoomId(2), Direction::South, RoomId(3))
-        .expect("Failed to connect Library and Basement");
-    House::connect_two_way(&mut house, RoomId(3), Direction::West, RoomId(0))
-        .expect("Failed to connect Basement and Entrance");
-
-    house
+fn new_game() -> GameState {
+    GameState::new(house, player);
 }
 
 fn main() -> anyhow::Result<()> {
