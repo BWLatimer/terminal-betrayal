@@ -1,6 +1,7 @@
 // game-state.rs
 use crate::house::{House, RoomId, Direction};
 use crate::player::Player;
+use crate::player::MoveError;
 
 pub struct GameState {
     pub house: House,
@@ -29,7 +30,7 @@ impl GameState {
     }
 
     pub fn new_player() -> Player {
-        let mut player = Player::new()
+        let mut player = Player::new_player();
         //Player::attributes(name: , job: ,
         
         player

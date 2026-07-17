@@ -1,21 +1,16 @@
 /// src/main.rs
 mod house;
-use house::{House, RoomId, Direction};
+use house::Direction;
 mod player;
-use player::Player;
 mod game_state;
 use game_state::GameState;
 use std::io::{self, Write};
 
 
-fn new_game() -> GameState {
-    GameState::new(house, player);
-}
-
 fn main() -> anyhow::Result<()> {
-    let house = build_house();
-    let mut player = Player { name: "Adventurer".to_string(), current_room: RoomId(0) };
-    
+    let house = GameState::build_house();
+    let mut player = GameState::new_player();
+   
     loop {
         let room = house.room(player.current_room)
             .expect("player's current_room should always be valid");
