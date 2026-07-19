@@ -18,7 +18,7 @@ pub enum MoveError {
 }
 
 impl Player {
-    pub fn new_player() -> Player {
+    pub fn new() -> Player {
         Player {name: "Adventurer".to_string(), current_room: RoomId(0) }
     }
 

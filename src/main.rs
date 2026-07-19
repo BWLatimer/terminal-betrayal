@@ -8,11 +8,10 @@ use std::io::{self, Write};
 
 
 fn main() -> anyhow::Result<()> {
-    let house = GameState::build_house();
-    let mut player = GameState::new_player();
+    let mut game_state = GameState::new(house, player);
    
     loop {
-        let room = house.room(player.current_room)
+        let room = game_state.room(player.current_room)
             .expect("player's current_room should always be valid");
         println!("Location: {}", room.name);
         print!("Exits: ");
