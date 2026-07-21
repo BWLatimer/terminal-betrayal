@@ -18,21 +18,20 @@ pub enum MoveError {
 }
 
 impl Player {
-    pub fn new() -> Player {
-        Player {name: "Adventurer".to_string(), current_room: RoomId(0) }
+    pub fn new(name: &str, start: RoomId) -> Player {
+        Player {name: name.to_string(), current_room: start}
     }
 
     pub fn move_player(&mut self, house: &House, dir: Direction) -> Result <(), MoveError> {
         let room = house.room(self.current_room)
             .expect("player's room should always be valid");
-        
         let found = room.exits.iter().find(|(exit_dir, _)| *exit_dir == dir);
         match found {
             Some((_, target)) => {
                 self.current_room = *target;
                 Ok(())
             }
-            None => Err(MoveError::InvalidMovement(dir)),
+            None => Err(MoveError::InvalidMovement(dir))
         }
     }
 }
