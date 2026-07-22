@@ -5,6 +5,8 @@ mod player;
 use player::{Player};
 mod game_state;
 use game_state::{GameState};
+mod app;
+use app::{App};
 use std::io::{self, Write};
 
 pub fn build_house() -> House {
@@ -34,44 +36,17 @@ fn main() -> anyhow::Result<()> {
     let house = build_house();
     let player = create_player();
     let mut game_state = GameState::new(house, player);
-    println!("Welcome {}, make yourself at home.", game_state.player.name);
+    let mut app = App::new_game(game_state);
 
-    loop {
-        // check current room and exits
-        let room = game_state.current_room()
-            .expect("player rooms should be valid");
-        println!("Location: {}", &room.name);
-        print!("Exits: ");
-        for (dir, _) in &room.exits {
-            print!("{:?} ", dir);
-        }
-        
-        println!();
-        print!(">");
-        io::stdout().flush()?;
-        
-        let mut input = String::new();
-        io::stdin().read_line(&mut input)?;
-        let input = input.trim();
-
-        let dir = match input.to_lowercase().as_str() {
-            "n" | "north" => Some(Direction::North),
-            "s" | "south" => Some(Direction::South),
-            "e" | "east" => Some(Direction::East),
-            "w" | "west" => Some(Direction::West),
-            "q" | "quit" => break,
-            _ => None,
-        };
-
-        match dir {
-            None => println!("Oops! That's not an available direction. Please try n, s, e, w, or q"),
-            Some(d) => {
-                match game_state.move_player(d) {
-                    Ok(()) => {}
-                    Err(_) => println!("I think that's a wall... Maybe try a different direction?"),
-                }
+    let mut terminal = ratatui::init();
+    while !app.should_quit {
+        terminal.draw(|frame| App::render(frame, &app))?;
+        if crossterm::event::poll(std::time::Duration::from_millis(100))? {
+            if let crossterm::event::Event::Key(key) = crossterm::event::read()? {
+                App::handle_key(&mut app, key);
             }
         }
     }
+    ratatui::restore();
     Ok(())
 }
