@@ -9,7 +9,7 @@ pub struct App {
 
 impl App {
     pub fn new_game(game_state: GameState) -> App {
-         println!("Welcome {}! Please, make yourself at home", game_state.player.name);
+        println!("Welcome {}! Please, make yourself at home", game_state.player.name);
         App{
             game_state,
             message: String::new(),

@@ -9,6 +9,15 @@ mod app;
 use app::{App};
 use std::io::{self, Write};
 
+// handle panic error states for ratatui
+fn install_panic_hook() {
+    let original_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |panic_info| {
+        let _ = ratatui::restore();
+        original_hook(panic_info);
+    }));
+}
+
 pub fn build_house() -> House {
     let mut house = House::new();
     House::add_room(&mut house, RoomId(0), &"Entrance");
@@ -33,6 +42,7 @@ fn create_player() -> Player {
 }
 
 fn main() -> anyhow::Result<()> {
+    install_panic_hook();
     let house = build_house();
     let player = create_player();
     let mut game_state = GameState::new(house, player);
