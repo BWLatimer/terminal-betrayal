@@ -7,6 +7,7 @@ mod game_state;
 use game_state::{GameState};
 mod app;
 use app::{App};
+mod map_state;
 use std::io::{self, Write};
 
 // handle panic error states for ratatui
