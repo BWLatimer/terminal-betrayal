@@ -1,5 +1,7 @@
 use crate::game_state::GameState;
+use crate::main;
 use crate::house::Direction;
+use ratatui::layout::{Layout, Constraint, Direction as LayoutDirection};
 
 pub struct App {
     pub game_state: GameState,
@@ -9,7 +11,7 @@ pub struct App {
 
 impl App {
     pub fn new_game(game_state: GameState) -> App {
-        println!("Welcome {}! Please, make yourself at home", game_state.player.name);
+
         App{
             game_state,
             message: String::new(),
@@ -18,7 +20,7 @@ impl App {
     }
 
     pub fn handle_key(app: &mut App, key: crossterm::event::KeyEvent) {
-        let dir = match key.code {
+            let dir = match key.code {
             crossterm::event::KeyCode::Char('n') => Some(Direction::North),
             crossterm::event::KeyCode::Char('s') => Some(Direction::South),
             crossterm::event::KeyCode::Char('e') => Some(Direction::East),
@@ -36,12 +38,23 @@ impl App {
     }
 
     pub fn render(frame: &mut ratatui::Frame, app: &App) {
+        let chunks = Layout::default()
+            .direction(LayoutDirection::Vertical)
+            .constraints([
+                Constraint::Min(3),
+                Constraint::Length(3),
+            ])
+            .split(frame.area());
+
         let room = app.game_state.current_room().expect("current room should be valid");
         let exits: Vec<String> = room.exits.iter().map(|(d, _)| format!("{:?}", d)).collect();
-
-        let text = format!("Location: {}\nExits: {}\n\n{}", room.name, exits.join(", "), app.message);
-        let paragraph = ratatui::widgets::Paragraph::new(text)
-            .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL).title("Betrayal"));
-        frame.render_widget(paragraph, frame.area());
+        let room_map = format!("Location: {}\nExits: {}\n", room.name, exits.join(", "));
+        let app_log = format!("{}\n", app.message);
+        let rm_map_paragraph = ratatui::widgets::Paragraph::new(room_map)
+            .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL).title("Terminal Betrayal"));
+        frame.render_widget(rm_map_paragraph, chunks[0]);
+        let app_log_paragraph = ratatui::widgets::Paragraph::new(app_log)
+            .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL).title("Log:"));
+        frame.render_widget(app_log_paragraph, chunks[1]);
     }
 }
