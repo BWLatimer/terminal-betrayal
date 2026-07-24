@@ -1,5 +1,6 @@
 /// src/player.rs
 use crate::house::{House, RoomId, Direction};
+use crate::item::ItemId;
 use thiserror::Error;
 
 #[derive(Debug)]
@@ -8,6 +9,7 @@ pub struct Player {
     pub current_room: RoomId,
         //TODO: what other things does a player need to track? ex) 
         //health, sanity, strength, inventory, location, etc.
+    pub inventory: Vec<ItemId>,
 }
 
 
@@ -18,8 +20,8 @@ pub enum MoveError {
 }
 
 impl Player {
-    pub fn new(name: &str, start: RoomId) -> Player {
-        Player {name: name.to_string(), current_room: start}
+    pub fn new(name: &str, start: RoomId, inventory: Vec<ItemId>) -> Player {
+        Player {name: name.to_string(), current_room: start, inventory:}
     }
 
     pub fn move_player(&mut self, house: &House, dir: Direction) -> Result <(), MoveError> {

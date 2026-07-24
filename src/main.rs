@@ -8,6 +8,8 @@ use game_state::{GameState};
 mod app;
 use app::{App};
 mod map_state;
+mod item;
+use item::{ItemRegistry, Item, ItemId};
 use std::io::{self, Write};
 
 // handle panic error states for ratatui
@@ -18,7 +20,12 @@ fn install_panic_hook() {
         original_hook(panic_info);
     }));
 }
-
+ pub fn new_registry() -> ItemRegistry {
+    let mut registry = ItemRegistry::new();
+    ItemRegistry::add_item(&mut registry, ItemId(0), &"Room Key", &"A small key for opening rooms");
+    ItemRegistry::add_item(& mut registry, ItemId(1), &"Crowbar", &"A large piece of metal build for prying... or clobbering.");
+    registry
+}
 pub fn build_house() -> House {
     let mut house = House::new();
     House::add_room(&mut house, RoomId(0), &"Entrance");

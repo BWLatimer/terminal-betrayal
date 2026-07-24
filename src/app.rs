@@ -71,9 +71,9 @@ impl App {
         let chunks = Layout::default()
             .direction(LayoutDirection::Vertical)
             .constraints([
-                Constraint::Length(4),
-                Constraint::Min(3),
-                Constraint::Length(4),
+                Constraint::Percentage(15),
+                Constraint::Percentage(70),
+                Constraint::Percentage(15),
             ])
             .split(frame.area());
         
