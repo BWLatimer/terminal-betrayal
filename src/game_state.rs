@@ -6,7 +6,7 @@ use std::collections::HashMap;
 pub struct GameState {
     pub house: House,
     pub player: Player,
-    pub items: ItemId,
+    pub registry: ItemRegistry,
 }
 
 impl GameState {
@@ -22,12 +22,9 @@ impl GameState {
     }
 
     pub fn pick_up_item(&mut self, item_id: ItemId) -> Result<(), ItemError> {
-        //TODO: find item_id in the current room's item list
-        //TODO: if found, remove it from the room and push it into player.inventory
-        //TODO: if not found, return an error
         let current = Owner::Room(self.player.current_room);
         if self.registry.owner_of(item_id) != Some(current) {
-            return Err(ItemError::NotInRoom);
+            return Err(ItemError::ItemNotFound(item_id));
         }
         self.registry.assign(item_id, Owner::Player);
         Ok(())

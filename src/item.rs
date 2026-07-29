@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use crate::house::{Room, RoomId};
 #[derive(Debug, Clone)]
 pub struct Item {
+    pub id: ItemId,
     pub name: String, 
     pub description: String,
     //TODO: eventually - add effects, modifiers, or properties
@@ -16,6 +17,8 @@ pub struct ItemId(pub usize);
 pub enum ItemError {
     #[error("no such item: {0:?}")]
     ItemNotFound(ItemId),
+    #[error("no items found in {0:?}")]
+    NoItemsInRoom(RoomId),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -27,20 +30,22 @@ pub enum Owner {
 }
 
 pub struct ItemRegistry {
-    items: HashMap<ItemId, Item>,
-    ownership: HashMap<ItemId, Owner>,
+    pub items: HashMap<ItemId, Item>,
+    pub ownership: HashMap<ItemId, Owner>,
 }
 
 impl ItemRegistry {
     
     pub fn new() -> Self {
-        ItemRegistry {items, ownership}
+        ItemRegistry {
+            items: HashMap::new(),
+            ownership: HashMap::new(),
+        }
     }
-    pub fn add_item(&mut self, id: ItemId, name: &str, description: &str) -> Item {
-        self.items.insert(id, Item{name: name.to_string, description: description.to_string}),
+    pub fn add_item(&mut self, id: ItemId, name: &str, description: &str) {
+        self.items.insert(id, Item{id, name: name.to_string(), description: description.to_string()});
     }
-    
-    }
+
     pub fn assign(&mut self, item_id: ItemId, owner: Owner) {
         self.ownership.insert(item_id, owner);
     }
@@ -53,6 +58,6 @@ impl ItemRegistry {
         self.ownership.iter()
             .filter(|(_, o)| **o == owner)
             .map(|(id, _)| *id)
-            .collect
+            .collect()
     }
 }

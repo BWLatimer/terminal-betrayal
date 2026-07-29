@@ -34,7 +34,7 @@ impl House {
     }
 
     pub fn add_room(&mut self, id: RoomId, name: &str) {
-        self.rooms.insert(id, Room { name: name.to_string(), exits: Vec::new()});
+        self.rooms.insert(id, Room { name: name.to_string(), exits: Vec::new(), items: Vec::new()});
     }
 //Unidirectional connection
     pub fn connect(&mut self, from: RoomId, dir: Direction, to: RoomId) -> Result<(), HouseError> {
@@ -46,6 +46,7 @@ impl House {
     pub fn room(&self, id: RoomId) -> Result<&Room, HouseError> {
         self.rooms.get(&id).ok_or(HouseError::RoomNotFound(id))
     }
+
 //Bidirectional connection
     pub fn connect_two_way(&mut self, a: RoomId, dir: Direction, b: RoomId) -> Result<(),HouseError> {
         self.connect(a, dir, b)?;

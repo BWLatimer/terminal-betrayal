@@ -20,12 +20,18 @@ fn install_panic_hook() {
         original_hook(panic_info);
     }));
 }
+
  pub fn new_registry() -> ItemRegistry {
-    let mut registry = ItemRegistry::new();
-    ItemRegistry::add_item(&mut registry, ItemId(0), &"Room Key", &"A small key for opening rooms");
-    ItemRegistry::add_item(& mut registry, ItemId(1), &"Crowbar", &"A large piece of metal build for prying... or clobbering.");
-    registry
+    let mut items = ItemRegistry::new();
+    ItemRegistry::add_item(& mut items, ItemId(1), &"Room Key", &"A small key for opening rooms");
+    ItemRegistry::add_item(& mut items, ItemId(2), &"Crowbar", &"A large piece of metal build for prying... or clobbering.");
+    ItemRegistry::add_item(& mut items, ItemId(0), &"Backpack", &"A basic bag for holding your inventory");
+    ItemRegistry::assign(& mut items, ItemId(0), item::Owner::Player);
+    ItemRegistry::assign(& mut items, ItemId(1), item::Owner::Room(RoomId(3)));
+    ItemRegistry::assign(& mut items, ItemId(2), item::Owner::Nowhere);
+    items
 }
+
 pub fn build_house() -> House {
     let mut house = House::new();
     House::add_room(&mut house, RoomId(0), &"Entrance");
@@ -45,7 +51,7 @@ pub fn build_house() -> House {
 }
 
 fn create_player() -> Player {
-    let player = Player::new(&"Adventurer", RoomId(0));
+    let player = Player::new(&"Adventurer", RoomId(0), Vec::new(), ItemId(0));
     player
 }
 
@@ -53,7 +59,8 @@ fn main() -> anyhow::Result<()> {
     install_panic_hook();
     let house = build_house();
     let player = create_player();
-    let mut game_state = GameState::new(house, player);
+    let registry = new_registry();
+    let mut game_state = GameState::new(house, player, registry);
     let mut app = App::new_game(game_state);
 
     let mut terminal = ratatui::init();
