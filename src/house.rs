@@ -1,7 +1,6 @@
 // src/house.rs
 use std::collections::HashMap;
 use thiserror::Error;
-use crate::item::ItemId;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct RoomId(pub usize);
@@ -10,7 +9,6 @@ pub struct RoomId(pub usize);
 pub struct Room {
     pub name: String,
     pub exits: Vec<(Direction, RoomId)>,
-    pub items: Vec<ItemId>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -34,7 +32,7 @@ impl House {
     }
 
     pub fn add_room(&mut self, id: RoomId, name: &str) {
-        self.rooms.insert(id, Room { name: name.to_string(), exits: Vec::new(), items: Vec::new()});
+        self.rooms.insert(id, Room { name: name.to_string(), exits: Vec::new()});
     }
 //Unidirectional connection
     pub fn connect(&mut self, from: RoomId, dir: Direction, to: RoomId) -> Result<(), HouseError> {

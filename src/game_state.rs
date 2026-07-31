@@ -3,6 +3,7 @@ use crate::house::{House, Room, RoomId, Direction, HouseError};
 use crate::player::{Player, MoveError};
 use crate::item::{ItemId, Item, ItemError, Owner, ItemRegistry};
 use std::collections::HashMap;
+
 pub struct GameState {
     pub house: House,
     pub player: Player,
@@ -28,6 +29,21 @@ impl GameState {
         }
         self.registry.assign(item_id, Owner::Player);
         Ok(())
+    }
+
+    pub fn drop_item(&mut self, item_id: ItemId) -> Result<(), ItemError> {
+        if self.registry.owner_of(item_id) != Some(Owner::Player) {
+            return Err(ItemError::ItemNotFound(item_id));
+        }
+        self.registry.assign(item_id, Owner::Room(self.player.current_room));
+        Ok(())
+    }
+
+    pub fn drop_last_item(&mut self) -> Result<(), ItemError> {
+        match self.registry.items_owned_by(Owner::Player).last().copied() {
+            Some(item_id) => self.drop_item(item_id),
+            None => Err(ItemError::InventoryEmpty),
+        }
     }
 }
 

@@ -51,7 +51,7 @@ pub fn build_house() -> House {
 }
 
 fn create_player() -> Player {
-    let player = Player::new(&"Adventurer", RoomId(0), Vec::new(), ItemId(0));
+    let player = Player::new(&"Adventurer", RoomId(0));
     player
 }
 

@@ -19,6 +19,8 @@ pub enum ItemError {
     ItemNotFound(ItemId),
     #[error("no items found in {0:?}")]
     NoItemsInRoom(RoomId),
+    #[error("Inventory is empty")]
+    InventoryEmpty,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -59,5 +61,9 @@ impl ItemRegistry {
             .filter(|(_, o)| **o == owner)
             .map(|(id, _)| *id)
             .collect()
+    }
+    
+    pub fn name_of(&self, item_id: ItemId) -> Option<&str> {
+    self.items.get(&item_id).map(|item| item.name.as_str())
     }
 }
