@@ -8,5 +8,6 @@ pub fn room_positions() -> HashMap<RoomId, (i32, i32)> {
     positions.insert(RoomId(1), (1, 0)); //Kitchen - North of Entrance
     positions.insert(RoomId(2), (2, 0)); //Library - East of Kitchen
     positions.insert(RoomId(3), (2, 1)); //Basement - South of Library
+    positions.insert(RoomId(4), (3, 0));
     positions
 }

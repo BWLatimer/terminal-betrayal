@@ -28,7 +28,7 @@ fn install_panic_hook() {
     ItemRegistry::add_item(& mut items, ItemId(0), &"Backpack", &"A basic bag for holding your inventory");
     ItemRegistry::assign(& mut items, ItemId(0), item::Owner::Player);
     ItemRegistry::assign(& mut items, ItemId(1), item::Owner::Room(RoomId(3)));
-    ItemRegistry::assign(& mut items, ItemId(2), item::Owner::Nowhere);
+    ItemRegistry::assign(& mut items, ItemId(2), item::Owner::Room(RoomId(4)));
     items
 }
 
@@ -38,7 +38,10 @@ pub fn build_house() -> House {
     House::add_room(&mut house, RoomId(1), &"Kitchen");
     House::add_room(&mut house, RoomId(2), &"Library");
     House::add_room(&mut house, RoomId(3), &"Basement");
+    House::add_room(&mut house, RoomId(4), &"Master Bedroom");
 
+    House::connect_two_way(&mut house, RoomId(4), Direction::West, RoomId(2))
+        .expect("Failed to connect Library to Master Bedroom");
     House::connect_two_way(&mut house, RoomId(0), Direction::North, RoomId(1))
         .expect("Failed to connect Entrance to Kitchen");
     House::connect_two_way(&mut house, RoomId(1), Direction::East, RoomId(2))
