@@ -46,7 +46,7 @@ pub fn build_house() -> House {
         .expect("Failed to connect Entrance to Kitchen");
     House::connect_two_way(&mut house, RoomId(1), Direction::East, RoomId(2))
         .expect("Failed to connect Kitchen to Library");
-    House::connect_two_way(&mut house, RoomId(2), Direction::South, RoomId(3))
+    House::connect(&mut house, RoomId(2), Direction::South, RoomId(3))
         .expect("Failed to connect Library to Basement");
     House::connect_two_way(&mut house, RoomId(3), Direction::West, RoomId(0))
         .expect("Failed to connect Basement to Entrance");

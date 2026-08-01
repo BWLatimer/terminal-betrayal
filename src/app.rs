@@ -1,4 +1,5 @@
 use crate::game_state::GameState;
+use crate::item::Owner;
 use crate::house::Direction;
 use crate::map_state::room_positions;
 use ratatui::layout::{Layout, Constraint, Direction as LayoutDirection};
@@ -54,10 +55,10 @@ impl App {
         }
 
         let dir = match key.code {
-            crossterm::event::KeyCode::Char('n') => Some(Direction::North),
-            crossterm::event::KeyCode::Char('s') => Some(Direction::South),
-            crossterm::event::KeyCode::Char('e') => Some(Direction::East),
-            crossterm::event::KeyCode::Char('w') => Some(Direction::West),
+            crossterm::event::KeyCode::Up => Some(Direction::North),
+            crossterm::event::KeyCode::Down => Some(Direction::South),
+            crossterm::event::KeyCode::Right => Some(Direction::East),
+            crossterm::event::KeyCode::Left => Some(Direction::West),
             crossterm::event::KeyCode::Char('q') => { app.should_quit = true; return; }
             _ => None,
         };
@@ -69,6 +70,23 @@ impl App {
             }
         }
     }
+
+    pub fn render_inventory(frame: &mut ratatui::Frame, area: ratatui::layout::Rect, app: &Self) {
+        let item_ids = app.game_state.registry.items_owned_by(Owner::Player);
+        
+        let list_items: Vec<ratatui::widgets::ListItem> = item_ids.iter()
+            .map(|id| {
+                let name = app.game_state.registry.name_of(*id).unwrap_or("something");
+                ratatui::widgets::ListItem::new(name.to_string())
+            })
+            .collect();
+        
+        let list = ratatui::widgets::List::new(list_items)
+            .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL).title("Inventory"));
+
+        frame.render_widget(list, area);
+    }
+
     pub fn render_map(frame: &mut ratatui::Frame, area: ratatui::layout::Rect, app: &Self) {
         let positions = room_positions();
         let cell_width = 12;
@@ -100,25 +118,33 @@ impl App {
     }
 
     pub fn render(frame: &mut ratatui::Frame, app: &App) {
-        let chunks = Layout::default()
+        let rows = Layout::default()
             .direction(LayoutDirection::Vertical)
             .constraints([
-                Constraint::Percentage(70),
                 Constraint::Percentage(15),
+                Constraint::Percentage(70),
                 Constraint::Percentage(15),
             ])
             .split(frame.area());
+        let middle_cols = Layout::default()
+            .direction(LayoutDirection::Horizontal)
+            .constraints([
+                Constraint::Percentage(30),
+                Constraint::Percentage(70),
+            ])
+            .split(rows[1]);
         
-        Self::render_map(frame, chunks[0], app);
+        Self::render_map(frame, middle_cols[1], app);
+        Self::render_inventory(frame, middle_cols[0], app);
         let room = app.game_state.current_room().expect("current room should be valid");
         let exits: Vec<String> = room.exits.iter().map(|(d, _)| format!("{:?}", d)).collect();
         let room_map = format!("Location: {}\nExits: {}\n", room.name, exits.join(", "));
         let app_log = format!("{}\n", app.message);
         let rm_map_paragraph = ratatui::widgets::Paragraph::new(room_map)
             .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL).title("Terminal Betrayal"));
-        frame.render_widget(rm_map_paragraph, chunks[1]);
+        frame.render_widget(rm_map_paragraph, rows[0]);
         let app_log_paragraph = ratatui::widgets::Paragraph::new(app_log)
             .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL).title("Log:"));
-        frame.render_widget(app_log_paragraph, chunks[2]);
+        frame.render_widget(app_log_paragraph, rows[2]);
     }
 }
