@@ -28,8 +28,7 @@ impl App {
                 let count = app.game_state.registry.items_owned_by(Owner::Player).len();
                 if count > 0 {
                     let i = match app.inventory_state.selected() {
-                        Some(i) if i + 1 < count => i + 1,
-                        Some(i) => i,
+                        Some(i) => (i + 1) % count,
                         None => 0
                     };
                     app.inventory_state.select(Some(i));
@@ -41,8 +40,7 @@ impl App {
                 let count = app.game_state.registry.items_owned_by(Owner::Player).len();
                 if count > 0 {
                     let i = match app.inventory_state.selected() {
-                        Some(i) if i > 0 => i - 1,
-                        Some(i) => i,
+                        Some(i) => (i + count - 1) % count,
                         None => 0,
                     };
                     app.inventory_state.select(Some(i));
@@ -145,7 +143,7 @@ impl App {
             } else {
                 normal_style
             };
-            let room_names = app.game_state.house.room(*room_id).expect("current room shouls always be valid");
+            let room_names = app.game_state.house.room(*room_id).expect("current room should always be valid");
             let house_map = format!("{}", room_names.name);
             let house_map_paragraph = ratatui::widgets::Paragraph::new(house_map)
                 .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL)
@@ -155,33 +153,46 @@ impl App {
     }
 
     pub fn render(frame: &mut ratatui::Frame, app: &mut App) {
-        let rows = Layout::default()
-            .direction(LayoutDirection::Vertical)
-            .constraints([
-                Constraint::Percentage(15),
-                Constraint::Percentage(70),
-                Constraint::Percentage(15),
-            ])
-            .split(frame.area());
-        let middle_cols = Layout::default()
+        let cols = Layout::default()
             .direction(LayoutDirection::Horizontal)
             .constraints([
                 Constraint::Percentage(30),
                 Constraint::Percentage(70),
             ])
-            .split(rows[1]);
+            .split(frame.area());
+        let left_col = Layout::default()
+            .direction(LayoutDirection::Vertical)
+            .constraints([
+                Constraint::Percentage(30),
+                Constraint::Percentage(40),
+                Constraint::Percentage(30),
+            ])
+            .split(cols[0]);
+        let right_col = Layout::default()
+            .direction(LayoutDirection::Vertical)
+            .constraints([
+                Constraint::Percentage(100),
+            ])
+            .split(cols[1]);
         
-        Self::render_map(frame, middle_cols[1], app);
-        Self::render_inventory(frame, middle_cols[0], app);
+        Self::render_map(frame, right_col[0], app);
+        Self::render_inventory(frame, left_col[1], app);
+        let monster_names: Vec<String> = app.game_state.monsters.monsters_in(app.game_state.player.current_room)
+                .iter().map(|m| m.name.clone()).collect();
+        let monster_line = if monster_names.is_empty() {
+                String::new()
+            } else {
+                format!("\nA {} growls, chained in the corner.", monster_names.join(", "))
+            };
         let room = app.game_state.current_room().expect("current room should be valid");
         let exits: Vec<String> = room.exits.iter().map(|(d, _)| format!("{:?}", d)).collect();
-        let room_map = format!("Location: {}\nExits: {}\n", room.name, exits.join(", "));
+        let room_map = format!("Location: {}\nExits: {}{}\n", room.name, exits.join(", "), monster_line);
         let app_log = format!("{}\n", app.message);
         let rm_map_paragraph = ratatui::widgets::Paragraph::new(room_map)
             .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL).title("Terminal Betrayal"));
-        frame.render_widget(rm_map_paragraph, rows[0]);
+        frame.render_widget(rm_map_paragraph, left_col[0]);
         let app_log_paragraph = ratatui::widgets::Paragraph::new(app_log)
             .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL).title("Log:"));
-        frame.render_widget(app_log_paragraph, rows[2]);
+        frame.render_widget(app_log_paragraph, left_col[2]);
     }
 }

@@ -2,17 +2,19 @@
 use crate::house::{House, Room, RoomId, Direction, HouseError};
 use crate::player::{Player, MoveError};
 use crate::item::{ItemId, Item, ItemError, Owner, ItemRegistry};
+use crate::monster::{MonsterRegistry, MonsterId, Monster};
 use std::collections::HashMap;
 
 pub struct GameState {
     pub house: House,
     pub player: Player,
     pub registry: ItemRegistry,
+    pub monsters: MonsterRegistry,
 }
 
 impl GameState {
-    pub fn new(house: House, player: Player, registry: ItemRegistry) -> GameState {
-        GameState {house, player, registry}
+    pub fn new(house: House, player: Player, registry: ItemRegistry, monsters: MonsterRegistry) -> GameState {
+        GameState {house, player, registry, monsters}
     }
 
     pub fn current_room(&self) -> Result<&Room, HouseError> {

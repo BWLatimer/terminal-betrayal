@@ -10,6 +10,8 @@ use app::{App};
 mod map_state;
 mod item;
 use item::{ItemRegistry, Item, ItemId};
+mod monster;
+use monster::{MonsterRegistry, MonsterId, Monster};
 use std::io::{self, Write};
 
 // handle panic error states for ratatui
@@ -35,21 +37,33 @@ fn install_panic_hook() {
 pub fn build_house() -> House {
     let mut house = House::new();
     House::add_room(&mut house, RoomId(0), &"Entrance");
-    House::add_room(&mut house, RoomId(1), &"Kitchen");
-    House::add_room(&mut house, RoomId(2), &"Library");
-    House::add_room(&mut house, RoomId(3), &"Basement");
+    House::add_room(&mut house, RoomId(1), &"Hallway");
+    House::add_room(&mut house, RoomId(2), &"Kitchen");
+    House::add_room(&mut house, RoomId(3), &"Library");
     House::add_room(&mut house, RoomId(4), &"Master Bedroom");
+    House::add_room(&mut house, RoomId(5), &"Staircase");
+    House::add_room(&mut house, RoomId(6), &"Basement");
+    House::add_room(&mut house, RoomId(7), &"2nd floor landing");
+    House::add_room(&mut house, RoomId(8), &"Balcony");
 
-    House::connect_two_way(&mut house, RoomId(4), Direction::West, RoomId(2))
-        .expect("Failed to connect Library to Master Bedroom");
-    House::connect_two_way(&mut house, RoomId(0), Direction::North, RoomId(1))
-        .expect("Failed to connect Entrance to Kitchen");
+    House::connect_two_way(&mut house, RoomId(0), Direction::East, RoomId(1))
+        .expect("Failed to connect Entrance to Hallway");
     House::connect_two_way(&mut house, RoomId(1), Direction::East, RoomId(2))
-        .expect("Failed to connect Kitchen to Library");
-    House::connect(&mut house, RoomId(2), Direction::South, RoomId(3))
+        .expect("Failed to connect Hallway to Kitchen");
+    House::connect_two_way(&mut house, RoomId(1), Direction::North, RoomId(5))
+        .expect("Failed to connect the Hallway to the Staircase");
+    House::connect_two_way(&mut house, RoomId(5), Direction::North, RoomId(7))
+        .expect("Failed to connect Staircase to 2nd floor landing");
+    House::connect_two_way(&mut house, RoomId(7), Direction::East, RoomId(3))
+        .expect("Failed to connect landing to Library");
+    House::connect(&mut house, RoomId(3), Direction::South, RoomId(6))
         .expect("Failed to connect Library to Basement");
-    House::connect_two_way(&mut house, RoomId(3), Direction::West, RoomId(0))
-        .expect("Failed to connect Basement to Entrance");
+    House::connect(&mut house, RoomId(6), Direction::South, RoomId(2))
+        .expect("Failed to connect Basement to Kitchen");
+    House::connect_two_way(&mut house, RoomId(7), Direction::West, RoomId(4))
+        .expect("Failed to connect landing to Master Bedroom");
+    House::connect_two_way(&mut house, RoomId(4), Direction::South, RoomId(8))
+        .expect("Failed to connect Bedroom to Balcony");
     house
 }
 
@@ -58,12 +72,19 @@ fn create_player() -> Player {
     player
 }
 
+pub fn new_monsters() -> MonsterRegistry {
+    let mut monsters = MonsterRegistry::new();
+    monsters.add_monster(MonsterId(0), "Zombie", RoomId(6), 10);
+    monsters
+}
+
 fn main() -> anyhow::Result<()> {
     install_panic_hook();
     let house = build_house();
     let player = create_player();
     let registry = new_registry();
-    let mut game_state = GameState::new(house, player, registry);
+    let monsters = new_monsters();
+    let mut game_state = GameState::new(house, player, registry, monsters);
     let mut app = App::new_game(game_state);
 
     let mut terminal = ratatui::init();
