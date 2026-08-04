@@ -68,7 +68,7 @@ fn main() -> anyhow::Result<()> {
 
     let mut terminal = ratatui::init();
     while !app.should_quit {
-        terminal.draw(|frame| App::render(frame, &app))?;
+        terminal.draw(|frame| App::render(frame, &mut app))?;
         if crossterm::event::poll(std::time::Duration::from_millis(100))? {
             if let crossterm::event::Event::Key(key) = crossterm::event::read()? {
                 App::handle_key(&mut app, key);

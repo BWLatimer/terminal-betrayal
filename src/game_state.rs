@@ -38,13 +38,6 @@ impl GameState {
         self.registry.assign(item_id, Owner::Room(self.player.current_room));
         Ok(())
     }
-
-    pub fn drop_last_item(&mut self) -> Result<(), ItemError> {
-        match self.registry.items_owned_by(Owner::Player).last().copied() {
-            Some(item_id) => self.drop_item(item_id),
-            None => Err(ItemError::InventoryEmpty),
-        }
-    }
 }
 
 

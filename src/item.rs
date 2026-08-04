@@ -1,7 +1,7 @@
 //item.rs
 use thiserror::Error;
 use std::collections::HashMap;
-use crate::house::{Room, RoomId};
+use crate::house::RoomId;
 #[derive(Debug, Clone)]
 pub struct Item {
     pub id: ItemId,
@@ -19,8 +19,6 @@ pub enum ItemError {
     ItemNotFound(ItemId),
     #[error("no items found in {0:?}")]
     NoItemsInRoom(RoomId),
-    #[error("Inventory is empty")]
-    InventoryEmpty,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

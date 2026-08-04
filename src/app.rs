@@ -8,6 +8,7 @@ pub struct App {
     pub game_state: GameState,
     pub message: String,
     pub should_quit: bool,
+    pub inventory_state: ratatui::widgets::ListState,
 }
 
 impl App {
@@ -17,11 +18,38 @@ impl App {
             game_state,
             message: String::new(),
             should_quit: false,
+            inventory_state: ratatui::widgets::ListState::default(),
         }
     }
 
     pub fn handle_key(app: &mut Self, key: crossterm::event::KeyEvent) {
         match key.code {
+            crossterm::event::KeyCode::Tab => {
+                let count = app.game_state.registry.items_owned_by(Owner::Player).len();
+                if count > 0 {
+                    let i = match app.inventory_state.selected() {
+                        Some(i) if i + 1 < count => i + 1,
+                        Some(i) => i,
+                        None => 0
+                    };
+                    app.inventory_state.select(Some(i));
+                }
+                return;
+            }
+
+            crossterm::event::KeyCode::BackTab => {
+                let count = app.game_state.registry.items_owned_by(Owner::Player).len();
+                if count > 0 {
+                    let i = match app.inventory_state.selected() {
+                        Some(i) if i > 0 => i - 1,
+                        Some(i) => i,
+                        None => 0,
+                    };
+                    app.inventory_state.select(Some(i));
+                }
+                return;
+            }
+
             crossterm::event::KeyCode::Char('?') => {
                 match app.game_state.player.search_room(&app.game_state.registry) {
                     Ok(()) => {
@@ -31,7 +59,7 @@ impl App {
                         app.message = format!("You found: {}", name);
                     }
                     Err(_) => app.message = "There's nothing here.".to_string(),
-                }
+                };
                 return;
             }
             crossterm::event::KeyCode::Char('a') => {
@@ -41,20 +69,29 @@ impl App {
                         Err(_) => app.message = "Couldn't pick that up.".to_string(),
                     },
                     None => app.message = "Nothing to pick up — search first with '?'.".to_string(),
-                }
+                };
                 return;
             }
             crossterm::event::KeyCode::Char('d') => {
-                match app.game_state.drop_last_item() {
-                    Ok(()) => app.message = "Dropped it.".to_string(),
-                    Err(_) => app.message = "You have nothing to drop.".to_string(),
-                }
+                match app.inventory_state.selected() {
+                    Some(index) => {
+                        let items = app.game_state.registry.items_owned_by(Owner::Player);
+                        match items.get(index) {
+                            Some(item_id) => match app.game_state.drop_item(*item_id) {
+                                Ok(()) => app.message = "Dropped it.".to_string(),
+                                Err(_) => app.message = "Couldn't drop that.".to_string(),
+                            },
+                            None => app.message = "Nothing Selected".to_string(),
+                        }
+                    }
+                    None => app.message = "Nothing selected".to_string(),
+                };
                 return;
             }
             _ => {}
         }
 
-        let dir = match key.code {
+        let dir =  match key.code {
             crossterm::event::KeyCode::Up => Some(Direction::North),
             crossterm::event::KeyCode::Down => Some(Direction::South),
             crossterm::event::KeyCode::Right => Some(Direction::East),
@@ -63,17 +100,16 @@ impl App {
             _ => None,
         };
         match dir {
-            None => { app.message = "Oops! That's not an available direction. \nPlease use n, s, e, w, or q.".to_string() }
+            None => { app.message = "Oops! That's not an available direction. \nPlease use arrow keys or q.".to_string() },
             Some(d) => match app.game_state.move_player(d) {
                 Ok(()) => app.message.clear(),
                 Err(_) => app.message = "I think that's a wall...\nMaybe try another direction?".to_string(),
-            }
+            },
         }
     }
 
-    pub fn render_inventory(frame: &mut ratatui::Frame, area: ratatui::layout::Rect, app: &Self) {
+    pub fn render_inventory(frame: &mut ratatui::Frame, area: ratatui::layout::Rect, app: &mut Self) {
         let item_ids = app.game_state.registry.items_owned_by(Owner::Player);
-        
         let list_items: Vec<ratatui::widgets::ListItem> = item_ids.iter()
             .map(|id| {
                 let name = app.game_state.registry.name_of(*id).unwrap_or("something");
@@ -82,9 +118,10 @@ impl App {
             .collect();
         
         let list = ratatui::widgets::List::new(list_items)
-            .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL).title("Inventory"));
-
-        frame.render_widget(list, area);
+            .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL).title("Inventory"))
+            .highlight_style(ratatui::style::Style::default().fg(ratatui::style::Color::Yellow))
+            .highlight_symbol("> ");
+        frame.render_stateful_widget(list, area, &mut app.inventory_state);
     }
 
     pub fn render_map(frame: &mut ratatui::Frame, area: ratatui::layout::Rect, app: &Self) {
@@ -117,7 +154,7 @@ impl App {
         }
     }
 
-    pub fn render(frame: &mut ratatui::Frame, app: &App) {
+    pub fn render(frame: &mut ratatui::Frame, app: &mut App) {
         let rows = Layout::default()
             .direction(LayoutDirection::Vertical)
             .constraints([
