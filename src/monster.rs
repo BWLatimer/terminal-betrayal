@@ -42,7 +42,7 @@ impl MonsterRegistry {
         self.monsters.values().filter(|m| m.current_room == room).collect()
     }
 
-    pub fn all_monsters_mut(&mut self, room: RoomId) -> Vec<&mut Monster> {
-        self.monsters.values_mut().filter(|m| m.current_room == room).collect()
+    pub fn all_monsters_mut(&mut self) -> Vec<&mut Monster> {
+        self.monsters.values_mut().collect()
     }
 }

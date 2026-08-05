@@ -28,7 +28,7 @@ m| m.id).collect();
                         let name: String = self.monsters.monster(id).iter().map(|m| m.name.clone()).collect();
                         notices.push(format!("a {} notices you", name)); //enter id, return Monster
                     }
-                    for monster in self.monsters.all_monsters_mut(self.player.current_room) {
+                    for monster in self.monsters.all_monsters_mut() {
                         if let Some(next) = self.house.next_step_toward(monster.current_room, to) {
                             monster.current_room = next;
                         }
