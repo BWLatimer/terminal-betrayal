@@ -21,8 +21,17 @@ impl GameState {
         for event in events {
             match event {
                 GameEvent::PlayerMoved { to, .. } => {
-                    for monster in self.monsters.monsters_in(to) {
-                        notices.push(format!("{} notices you", monster.name));
+                    let monster_ids: Vec<MonsterId> = self.monsters.monsters_in(to)
+                        .iter().map(|
+m| m.id).collect();
+                    for id in monster_ids {
+                        let name: String = self.monsters.monster(id).iter().map(|m| m.name.clone()).collect();
+                        notices.push(format!("a {} notices you", name)); //enter id, return Monster
+                    }
+                    for monster in self.monsters.all_monsters_mut(self.player.current_room) {
+                        if let Some(next) = self.house.next_step_toward(monster.current_room, to) {
+                            monster.current_room = next;
+                        }
                     }
                 }
             }

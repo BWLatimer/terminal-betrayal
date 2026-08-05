@@ -1,5 +1,5 @@
 // src/house.rs
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use thiserror::Error;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -31,6 +31,38 @@ impl House {
         House { rooms: HashMap::new() }
     }
 
+    pub fn next_step_toward(&self, from: RoomId, to: RoomId) -> Option<RoomId> {
+        if from == to {
+            return None;
+        }
+
+        let mut visited: HashMap<RoomId, RoomId> = HashMap::new(); //tracking the room we
+        //came from
+        let mut queue: VecDeque<RoomId> = VecDeque::new();
+        queue.push_back(from);
+
+        while let Some(current) = queue.pop_front() {
+            if current == to {
+                // walk backward from 'to' until we find the stop right after 'from'
+                let mut step = to;
+                while let Some(&prev) = visited.get(&step) {
+                    if prev == from {
+                        return Some(step);
+                    }
+                    step = prev;
+                }
+            }
+            if let Ok(room) = self.room(current) {
+                for (_, neighbor) in &room.exits {
+                    if !visited.contains_key(neighbor) && *neighbor != from {
+                        visited.insert(*neighbor, current);
+                        queue.push_back(*neighbor);
+                    }
+                }
+            }
+        }
+        None //no path found
+    }
     pub fn add_room(&mut self, id: RoomId, name: &str) {
         self.rooms.insert(id, Room { name: name.to_string(), exits: Vec::new()});
     }
