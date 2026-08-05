@@ -100,7 +100,13 @@ impl App {
         match dir {
             None => { app.message = "Oops! That's not an available direction. \nPlease use arrow keys or q.".to_string() },
             Some(d) => match app.game_state.move_player(d) {
-                Ok(()) => app.message.clear(),
+                Ok(()) => {
+                    app.message.clear();
+                    let notices = app.game_state.process_events();
+                    if !notices.is_empty() {
+                        app.message = notices.join("\n");
+                    }
+                }
                 Err(_) => app.message = "I think that's a wall...\nMaybe try another direction?".to_string(),
             },
         }
@@ -156,27 +162,27 @@ impl App {
         let cols = Layout::default()
             .direction(LayoutDirection::Horizontal)
             .constraints([
-                Constraint::Percentage(30),
                 Constraint::Percentage(70),
+                Constraint::Percentage(30),
             ])
             .split(frame.area());
         let left_col = Layout::default()
             .direction(LayoutDirection::Vertical)
             .constraints([
                 Constraint::Percentage(30),
-                Constraint::Percentage(40),
-                Constraint::Percentage(30),
+                Constraint::Percentage(70),
             ])
-            .split(cols[0]);
+            .split(cols[1]);
         let right_col = Layout::default()
             .direction(LayoutDirection::Vertical)
             .constraints([
-                Constraint::Percentage(100),
+                Constraint::Percentage(30),
+                Constraint::Percentage(70),
             ])
-            .split(cols[1]);
+            .split(cols[0]);
         
-        Self::render_map(frame, right_col[0], app);
-        Self::render_inventory(frame, left_col[1], app);
+        Self::render_map(frame, right_col[1], app);
+        Self::render_inventory(frame, left_col[0], app);
         let monster_names: Vec<String> = app.game_state.monsters.monsters_in(app.game_state.player.current_room)
                 .iter().map(|m| m.name.clone()).collect();
         let monster_line = if monster_names.is_empty() {
@@ -190,9 +196,9 @@ impl App {
         let app_log = format!("{}\n", app.message);
         let rm_map_paragraph = ratatui::widgets::Paragraph::new(room_map)
             .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL).title("Terminal Betrayal"));
-        frame.render_widget(rm_map_paragraph, left_col[0]);
+        frame.render_widget(rm_map_paragraph, right_col[0]);
         let app_log_paragraph = ratatui::widgets::Paragraph::new(app_log)
             .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL).title("Log:"));
-        frame.render_widget(app_log_paragraph, left_col[2]);
+        frame.render_widget(app_log_paragraph, left_col[1]);
     }
 }

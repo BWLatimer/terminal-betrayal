@@ -12,6 +12,8 @@ mod item;
 use item::{ItemRegistry, Item, ItemId};
 mod monster;
 use monster::{MonsterRegistry, MonsterId, Monster};
+mod event;
+use event::{EventQueue, GameEvent};
 use std::io::{self, Write};
 
 // handle panic error states for ratatui
@@ -84,7 +86,8 @@ fn main() -> anyhow::Result<()> {
     let player = create_player();
     let registry = new_registry();
     let monsters = new_monsters();
-    let mut game_state = GameState::new(house, player, registry, monsters);
+    let events = EventQueue::new();
+    let mut game_state = GameState::new(house, player, registry, monsters, events);
     let mut app = App::new_game(game_state);
 
     let mut terminal = ratatui::init();
