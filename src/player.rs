@@ -8,6 +8,8 @@ pub struct Player {
     pub name: String,
     pub current_room: RoomId,
     pub found_item: Option <ItemId>,
+    pub speed: u32,
+    pub moves_remaining: u32,
 }
 
 
@@ -15,11 +17,14 @@ pub struct Player {
 pub enum MoveError {
     #[error("You can't go this way: {0:?}")]
     InvalidMovement(Direction),
+
+    #[error("No moves remaining")]
+    NoMovesRemaining,
 }
 
 impl Player {
-    pub fn new(name: &str, start: RoomId) -> Player {
-        Player {name: name.to_string(), current_room: start, found_item: None}
+    pub fn new(name: &str, start: RoomId, speed: u32, moves_remaining: u32) -> Player {
+        Player {name: name.to_string(), current_room: start, found_item: None, speed: 3, moves_remaining: 3}
     }
 
     pub fn move_player(&mut self, house: &House, dir: Direction) -> Result <(), MoveError> {

@@ -4,6 +4,7 @@ use crate::player::{Player, MoveError};
 use crate::item::{ItemId, Item, ItemError, Owner, ItemRegistry};
 use crate::monster::{MonsterRegistry, MonsterId, Monster};
 use crate::event::{GameEvent, EventQueue};
+use crate::room_event::{RoomEventRegistry, RoomEventKind};
 use std::collections::HashMap;
 
 pub struct GameState {
@@ -12,6 +13,7 @@ pub struct GameState {
     pub registry: ItemRegistry,
     pub monsters: MonsterRegistry,
     pub events: EventQueue,
+    pub room_events: RoomEventRegistry,
 }
 
 impl GameState {
@@ -21,36 +23,64 @@ impl GameState {
         for event in events {
             match event {
                 GameEvent::PlayerMoved { to, .. } => {
-                    let monster_ids: Vec<MonsterId> = self.monsters.monsters_in(to)
-                        .iter().map(|
-m| m.id).collect();
-                    for id in monster_ids {
-                        let name: String = self.monsters.monster(id).iter().map(|m| m.name.clone()).collect();
-                        notices.push(format!("a {} notices you", name)); //enter id, return Monster
-                    }
-                    for monster in self.monsters.all_monsters_mut() {
-                        if let Some(next) = self.house.next_step_toward(monster.current_room, to) {
-                            monster.current_room = next;
+                    if let Some(kind) = self.room_events.room_check(to) {
+                        match kind {
+                            RoomEventKind::SpawnMonster(monster_id) => {
+                                self.monsters.move_to(monster_id, to);
+                                notices.push("Something lurches out of the shadows!".to_string());
+                            }
                         }
-                    }
+                        self.end_turn();
+                    } else {
+                         let monster_ids: Vec<MonsterId> = self.monsters.monsters_in(to)
+                        .iter().map(|m| m.id).collect();
+                        for id in monster_ids {
+                            let name: String = self.monsters.monster(id).iter().map(|m| m.name.clone()).collect();
+                            notices.push(format!("a {} notices you", name)); //enter id, return Monster
+                        }
+                    } 
                 }
             }
         }
         notices
     }
+    
+    pub fn end_turn(&mut self) {
+        let to = self.player.current_room;
+        for monster in self.monsters.all_monsters_mut() {
+            if let Some(current) = monster.current_room {
+                for _ in 0..monster.speed {
+                    if let Some(next) = self.house.next_step_toward(current, to) {
+                        monster.current_room = Some(next);
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
+        self.player.moves_remaining = self.player.speed;
+    }
 
-    pub fn new(house: House, player: Player, registry: ItemRegistry, monsters: MonsterRegistry, events: EventQueue) -> GameState {
-        GameState {house, player, registry, monsters, events}
+    pub fn new(house: House, player: Player, registry: ItemRegistry, monsters: MonsterRegistry, events: EventQueue, room_events: RoomEventRegistry) -> GameState {
+        GameState {house, player, registry, monsters, events, room_events}
     }
 
     pub fn current_room(&self) -> Result<&Room, HouseError> {
         self.house.room(self.player.current_room)
     }
     pub fn move_player(&mut self, dir: Direction) -> Result<(), MoveError> {
+        if self.player.moves_remaining == 0 {
+            return Err(MoveError::NoMovesRemaining);
+        }
         let from = self.player.current_room;
         self.player.move_player(&self.house, dir)?;
+        self.player.moves_remaining -= 1;
         let to = self.player.current_room;
         self.events.push(GameEvent::PlayerMoved { from, to});
+
+        if self.player.moves_remaining == 0 {
+            self.end_turn();
+        }
         Ok(())
     }
 

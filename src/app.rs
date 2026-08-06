@@ -86,6 +86,12 @@ impl App {
                 };
                 return;
             }
+            
+            crossterm::event::KeyCode::Char(' ') => {
+                app.game_state.end_turn();
+                app.message = "you end your turn".to_string();
+                return;
+            }
             _ => {}
         }
 
