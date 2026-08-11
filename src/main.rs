@@ -16,6 +16,7 @@ mod event;
 use event::{EventQueue, GameEvent};
 mod room_event;
 use room_event::{RoomEventRegistry, RoomEventKind};
+mod combat;
 use std::io::{self, Write};
 
 // handle panic error states for ratatui
@@ -72,13 +73,13 @@ pub fn build_house() -> House {
 }
 
 fn create_player() -> Player {
-    let player = Player::new(&"Adventurer", RoomId(0), 3, 3);
+    let player = Player::new(&"Adventurer", RoomId(0), 5, 3, 3, 3);
     player
 }
 
 pub fn new_monsters() -> MonsterRegistry {
     let mut monsters = MonsterRegistry::new();
-    monsters.add_monster(MonsterId(0), "Zombie", None, 10, 1);
+    monsters.add_monster(MonsterId(0), "Zombie", None, 5, 3, 1);
     monsters
 }
 

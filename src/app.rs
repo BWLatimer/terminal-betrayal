@@ -2,20 +2,39 @@ use crate::game_state::GameState;
 use crate::item::Owner;
 use crate::house::Direction;
 use crate::map_state::room_positions;
+use crate::monster::MonsterId;
 use ratatui::layout::{Layout, Constraint, Direction as LayoutDirection};
 
 pub struct App {
     pub game_state: GameState,
+    pub mode: AppState,
     pub message: String,
     pub should_quit: bool,
     pub inventory_state: ratatui::widgets::ListState,
 }
 
+pub struct CombatState {
+    pub monster_id: MonsterId,
+    pub monster_attacks_first: bool,
+    pub menu: CombatMenu,
+}
+
+pub enum CombatMenu {
+    Main,
+    ItemSelect,
+}
+
+pub enum AppState {
+    Exploring,
+    Combat(CombatState),
+}
+
 impl App {
-    pub fn new_game(game_state: GameState) -> App {
+    pub fn new_game(game_state: GameState, mode: AppState) -> App {
 
         App{
             game_state,
+            mode,
             message: String::new(),
             should_quit: false,
             inventory_state: ratatui::widgets::ListState::default(),
@@ -23,6 +42,13 @@ impl App {
     }
 
     pub fn handle_key(app: &mut Self, key: crossterm::event::KeyEvent) {
+        match &app.mode{
+            AppState::Combat(_) => {
+                Self::handle_combat_key(app, key);
+                return;
+            }
+            AppState::Exploring => {}
+        }
         match key.code {
             crossterm::event::KeyCode::Tab => {
                 let count = app.game_state.registry.items_owned_by(Owner::Player).len();
@@ -48,7 +74,7 @@ impl App {
                 return;
             }
 
-            crossterm::event::KeyCode::Char('?') => {
+            crossterm::event::KeyCode::Char('s') => {
                 match app.game_state.player.search_room(&app.game_state.registry) {
                     Ok(()) => {
                         let item_id = app.game_state.player.found_item

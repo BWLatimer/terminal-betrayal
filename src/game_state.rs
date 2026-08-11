@@ -5,6 +5,7 @@ use crate::item::{ItemId, Item, ItemError, Owner, ItemRegistry};
 use crate::monster::{MonsterRegistry, MonsterId, Monster};
 use crate::event::{GameEvent, EventQueue};
 use crate::room_event::{RoomEventRegistry, RoomEventKind};
+use crate::combat::{CombatOutcome, Combat};
 use std::collections::HashMap;
 
 pub struct GameState {
@@ -14,9 +15,20 @@ pub struct GameState {
     pub monsters: MonsterRegistry,
     pub events: EventQueue,
     pub room_events: RoomEventRegistry,
+    pub combat: Combat,
 }
 
 impl GameState {
+    pub fn attack(&mut self, monster_id: MonsterId, monster_attacks_first: bool) -> (CombatOutcome, Vec<String>) {
+        let monster = self.monsters.monster_mut(monster_id)
+            .expect("attack called on a monster that doesn't exist");
+        let (outcome, log) = Combat::resolve_round(&mut self.player, monster, monster_attacks_first);
+        if let CombatOutcome::PlayerWon = outcome {
+            self.monsters.remove_monster(monster_id);
+        }
+        (outcome, log)
+    }
+
     pub fn process_events(&mut self) -> Vec<String> {
         let events = self.events.drain();
         let mut notices = Vec::new();
@@ -61,8 +73,8 @@ impl GameState {
         self.player.moves_remaining = self.player.speed;
     }
 
-    pub fn new(house: House, player: Player, registry: ItemRegistry, monsters: MonsterRegistry, events: EventQueue, room_events: RoomEventRegistry) -> GameState {
-        GameState {house, player, registry, monsters, events, room_events}
+    pub fn new(house: House, player: Player, registry: ItemRegistry, monsters: MonsterRegistry, events: EventQueue, room_events: RoomEventRegistry, combat: Combat) -> GameState {
+        GameState {house, player, registry, monsters, events, room_events, combat}
     }
 
     pub fn current_room(&self) -> Result<&Room, HouseError> {
