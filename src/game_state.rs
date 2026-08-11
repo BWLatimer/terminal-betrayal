@@ -15,7 +15,6 @@ pub struct GameState {
     pub monsters: MonsterRegistry,
     pub events: EventQueue,
     pub room_events: RoomEventRegistry,
-    pub combat: Combat,
 }
 
 impl GameState {
@@ -73,8 +72,8 @@ impl GameState {
         self.player.moves_remaining = self.player.speed;
     }
 
-    pub fn new(house: House, player: Player, registry: ItemRegistry, monsters: MonsterRegistry, events: EventQueue, room_events: RoomEventRegistry, combat: Combat) -> GameState {
-        GameState {house, player, registry, monsters, events, room_events, combat}
+    pub fn new(house: House, player: Player, registry: ItemRegistry, monsters: MonsterRegistry, events: EventQueue, room_events: RoomEventRegistry) -> GameState {
+        GameState {house, player, registry, monsters, events, room_events}
     }
 
     pub fn current_room(&self) -> Result<&Room, HouseError> {

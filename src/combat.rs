@@ -16,7 +16,7 @@ pub struct Combat {
 }
 
 impl Combat {
-    pub fn dodge_succeeds(speed: u32) -> bool {
+    pub fn dodge_succeeds(speed: i32) -> bool {
         let roll = rand::thread_rng().gen_range(1..=6);
         roll <= speed
     }

@@ -79,7 +79,7 @@ fn create_player() -> Player {
 
 pub fn new_monsters() -> MonsterRegistry {
     let mut monsters = MonsterRegistry::new();
-    monsters.add_monster(MonsterId(0), "Zombie", None, 5, 3, 1);
+    monsters.add_monster(MonsterId(0), "Zombie", None, 5, 1, 1);
     monsters
 }
 
@@ -98,7 +98,7 @@ fn main() -> anyhow::Result<()> {
     let events = EventQueue::new();
     let room_event = basement_spawn();
     let mut game_state = GameState::new(house, player, registry, monsters, events, room_event);
-    let mut app = App::new_game(game_state);
+    let mut app = App::new_game(game_state, app::AppMode::Exploring);
 
     let mut terminal = ratatui::init();
     while !app.should_quit {

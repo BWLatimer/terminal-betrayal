@@ -8,10 +8,10 @@ pub struct Player {
     pub name: String,
     pub current_room: RoomId,
     pub found_item: Option <ItemId>,
-    pub health: u32,
-    pub strength: u32,
-    pub speed: u32,
-    pub moves_remaining: u32,
+    pub health: i32,
+    pub strength: i32,
+    pub speed: i32,
+    pub moves_remaining: i32,
 }
 
 
@@ -25,7 +25,7 @@ pub enum MoveError {
 }
 
 impl Player {
-    pub fn new(name: &str, start: RoomId, health: u32, strength: u32, speed: u32, moves_remaining: u32) -> Player {
+    pub fn new(name: &str, start: RoomId, health: i32, strength: i32, speed: i32, moves_remaining: i32) -> Player {
         Player {name: name.to_string(), current_room: start, found_item: None,health: 5, strength: 2, speed: 3, moves_remaining: 3}
     }
 

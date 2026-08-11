@@ -7,7 +7,7 @@ use ratatui::layout::{Layout, Constraint, Direction as LayoutDirection};
 
 pub struct App {
     pub game_state: GameState,
-    pub mode: AppState,
+    pub mode: AppMode,
     pub message: String,
     pub should_quit: bool,
     pub inventory_state: ratatui::widgets::ListState,
@@ -24,13 +24,13 @@ pub enum CombatMenu {
     ItemSelect,
 }
 
-pub enum AppState {
+pub enum AppMode {
     Exploring,
     Combat(CombatState),
 }
 
 impl App {
-    pub fn new_game(game_state: GameState, mode: AppState) -> App {
+    pub fn new_game(game_state: GameState, mode: AppMode) -> App {
 
         App{
             game_state,
@@ -42,13 +42,11 @@ impl App {
     }
 
     pub fn handle_key(app: &mut Self, key: crossterm::event::KeyEvent) {
-        match &app.mode{
-            AppState::Combat(_) => {
-                Self::handle_combat_key(app, key);
-                return;
-            }
-            AppState::Exploring => {}
+        if let AppMode::Combat(_) = app.mode {
+            Self::handle_combat_key(app, key);
+            return;
         }
+    
         match key.code {
             crossterm::event::KeyCode::Tab => {
                 let count = app.game_state.registry.items_owned_by(Owner::Player).len();
@@ -70,6 +68,23 @@ impl App {
                         None => 0,
                     };
                     app.inventory_state.select(Some(i));
+                }
+                return;
+            }
+            
+            crossterm::event::KeyCode::Char('f') => {
+                let monsters_here = app.game_state.monsters.monsters_in(app.game_state.player.current_room);
+                match monsters_here.first() {
+                    Some(monster) => {
+                        let monster_id = monster.id;
+                        app.mode = AppMode::Combat(CombatState {
+                            monster_id,
+                            monster_attacks_first: true,
+                            menu: CombatMenu::Main,
+                        });
+                        app.message = format!("A {} blocks your path!", monster.name);
+                    }
+                    None => app.message = "There's nothing to fight here.".to_string(),
                 }
                 return;
             }
@@ -141,6 +156,34 @@ impl App {
                 }
                 Err(_) => app.message = "I think that's a wall...\nMaybe try another direction?".to_string(),
             },
+        }
+    }
+
+    pub fn handle_combat_key(app: &mut Self, key: crossterm::event::KeyEvent) {
+        let (monster_id, monster_attacks_first) = match &app.mode {
+            AppMode::Combat(state) => (state.monster_id, state.monster_attacks_first),
+            AppMode::Exploring => return,
+        };
+
+        match key.code {
+           crossterm::event::KeyCode::Char('f') => {
+                let (outcome, log) = app.game_state.attack(monster_id, monster_attacks_first);
+                app.message = log.join("\n");
+                match outcome {
+                    crate::combat::CombatOutcome::PlayerWon => {
+                        app.mode = AppMode::Exploring;
+                    }       
+                    crate::combat::CombatOutcome::Ongoing => {}
+                    crate::combat::CombatOutcome::PlayerFled => {
+                        app.mode = AppMode::Exploring;
+                    }
+                }
+            }
+            crossterm::event::KeyCode::Char('r') => {
+                app.message = "You flee the fight!".to_string();
+                app.mode = AppMode::Exploring;
+            }
+            _ => {}
         }
     }
 

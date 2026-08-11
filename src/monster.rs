@@ -11,9 +11,9 @@ pub struct Monster {
     pub id: MonsterId,
     pub name: String,
     pub current_room: Option<RoomId>,
-    pub strength: u32,
-    pub health: u32,
-    pub speed: u32
+    pub strength: i32,
+    pub health: i32,
+    pub speed: i32
     //TODO: add in other identifiers or attributes
 }
 
@@ -32,7 +32,7 @@ impl MonsterRegistry {
         MonsterRegistry { monsters: HashMap::new() }
     }
 
-    pub fn add_monster(&mut self, id: MonsterId, name: &str, room: Option<RoomId>, health: u32, strength: u32, speed: u32) {
+    pub fn add_monster(&mut self, id: MonsterId, name: &str, room: Option<RoomId>, health: i32, strength: i32, speed: i32) {
         self.monsters.insert(id, Monster { id, name: name.to_string(), current_room: room, health, strength, speed});
     }
 
