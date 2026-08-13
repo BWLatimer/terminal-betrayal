@@ -2,6 +2,7 @@
 use crate::house::{House, RoomId, Direction};
 use crate::item::{ItemId, ItemRegistry, Owner, ItemError};
 use thiserror::Error;
+use serde::Deserialize;
 
 #[derive(Debug)]
 pub struct Player {
@@ -12,6 +13,20 @@ pub struct Player {
     pub strength: i32,
     pub speed: i32,
     pub moves_remaining: i32,
+}
+
+#[derive(Deserialize)]
+pub struct PlayerConfig {
+    pub name: String,
+    pub health: i32,
+    pub strength: i32,
+    pub speed: i32,
+}
+
+#[derive(Debug, Error)]
+pub enum ConfigError {
+    #[error("check the toml file")]
+    InvalidConfig,
 }
 
 
@@ -25,8 +40,9 @@ pub enum MoveError {
 }
 
 impl Player {
-    pub fn new(name: &str, start: RoomId, health: i32, strength: i32, speed: i32, moves_remaining: i32) -> Player {
-        Player {name: name.to_string(), current_room: start, found_item: None,health: 5, strength: 2, speed: 3, moves_remaining: 3}
+    pub fn new(name: String, start: RoomId, health: i32, strength: i32, speed: i32) -> Player {
+        let speed_to_moves = speed.clone();
+        Player { name, current_room: start, found_item: None, health, strength, speed, moves_remaining: speed_to_moves}
     }
 
     pub fn move_player(&mut self, house: &House, dir: Direction) -> Result <(), MoveError> {

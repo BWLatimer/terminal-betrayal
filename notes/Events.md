@@ -1,3 +1,0 @@
-[[luck]]
-[[omens]]
-[[surprises]]

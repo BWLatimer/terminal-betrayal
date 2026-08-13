@@ -2,7 +2,7 @@
 mod house;
 use house::{House, RoomId, Direction};
 mod player;
-use player::{Player};
+use player::{Player, PlayerConfig};
 mod game_state;
 use game_state::{GameState};
 mod app;
@@ -72,14 +72,20 @@ pub fn build_house() -> House {
     house
 }
 
-fn create_player() -> Player {
-    let player = Player::new(&"Adventurer", RoomId(0), 5, 3, 3, 3);
+fn load_player_config() -> anyhow::Result<PlayerConfig> {
+    let toml_str = std::fs::read_to_string("assets/player.toml")?;
+    let config: player::PlayerConfig = toml::from_str(&toml_str)?;
+    Ok(config)
+}
+
+fn create_player(config: PlayerConfig) -> Player {
+    let player = Player::new(config.name, RoomId(0), config.health, config.strength, config.speed);
     player
 }
 
 pub fn new_monsters() -> MonsterRegistry {
     let mut monsters = MonsterRegistry::new();
-    monsters.add_monster(MonsterId(0), "Zombie", None, 5, 1, 1);
+    monsters.add_monster(MonsterId(0), "Zombie", None, 15, 2, 1);
     monsters
 }
 
@@ -92,7 +98,8 @@ pub fn basement_spawn() -> RoomEventRegistry {
 fn main() -> anyhow::Result<()> {
     install_panic_hook();
     let house = build_house();
-    let player = create_player();
+    let player_config = load_player_config()?;
+    let player = create_player(player_config);
     let registry = new_registry();
     let monsters = new_monsters();
     let events = EventQueue::new();

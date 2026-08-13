@@ -1,4 +1,0 @@
-[[Traps]]
-[[Tools]]
-[[Trinkets]]
-[[Modifiers]]

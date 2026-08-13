@@ -187,6 +187,13 @@ impl App {
         }
     }
 
+    pub fn render_player_stats(frame: &mut ratatui::Frame, area: ratatui::layout::Rect, app: &Self) {
+        let player_stats = format!("hp:{}\nstr: {} sp: {}\nMoves Remaining: {}", app.game_state.player.health, app.game_state.player.strength, app.game_state.player.speed, app.game_state.player.moves_remaining);
+        let player_paragraph = ratatui::widgets::Paragraph::new(player_stats)
+            .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL).title(app.game_state.player.name.to_string()));
+        frame.render_widget(player_paragraph, area);
+    }
+
     pub fn render_inventory(frame: &mut ratatui::Frame, area: ratatui::layout::Rect, app: &mut Self) {
         let item_ids = app.game_state.registry.items_owned_by(Owner::Player);
         let list_items: Vec<ratatui::widgets::ListItem> = item_ids.iter()
@@ -244,7 +251,8 @@ impl App {
         let left_col = Layout::default()
             .direction(LayoutDirection::Vertical)
             .constraints([
-                Constraint::Percentage(30),
+                Constraint::Min(6),
+                Constraint::Percentage(15),
                 Constraint::Percentage(70),
             ])
             .split(cols[1]);
@@ -256,8 +264,9 @@ impl App {
             ])
             .split(cols[0]);
         
+        Self::render_player_stats(frame, left_col[0], app);
         Self::render_map(frame, right_col[1], app);
-        Self::render_inventory(frame, left_col[0], app);
+        Self::render_inventory(frame, left_col[1], app);
         let monster_names: Vec<String> = app.game_state.monsters.monsters_in(app.game_state.player.current_room)
                 .iter().map(|m| m.name.clone()).collect();
         let monster_line = if monster_names.is_empty() {
@@ -274,6 +283,6 @@ impl App {
         frame.render_widget(rm_map_paragraph, right_col[0]);
         let app_log_paragraph = ratatui::widgets::Paragraph::new(app_log)
             .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL).title("Log:"));
-        frame.render_widget(app_log_paragraph, left_col[1]);
+        frame.render_widget(app_log_paragraph, left_col[2]);
     }
 }

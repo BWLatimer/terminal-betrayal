@@ -5,7 +5,7 @@ use crate::item::{ItemId, Item, ItemError, Owner, ItemRegistry};
 use crate::monster::{MonsterRegistry, MonsterId, Monster};
 use crate::event::{GameEvent, EventQueue};
 use crate::room_event::{RoomEventRegistry, RoomEventKind};
-use crate::combat::{CombatOutcome, Combat};
+use crate::combat::{CombatOutcome, resolve_round};
 use std::collections::HashMap;
 
 pub struct GameState {
@@ -21,7 +21,7 @@ impl GameState {
     pub fn attack(&mut self, monster_id: MonsterId, monster_attacks_first: bool) -> (CombatOutcome, Vec<String>) {
         let monster = self.monsters.monster_mut(monster_id)
             .expect("attack called on a monster that doesn't exist");
-        let (outcome, log) = Combat::resolve_round(&mut self.player, monster, monster_attacks_first);
+        let (outcome, log) = resolve_round(&mut self.player, monster, monster_attacks_first);
         if let CombatOutcome::PlayerWon = outcome {
             self.monsters.remove_monster(monster_id);
         }

@@ -9,3 +9,5 @@ crossterm = "0.28"
 rand = "0.8"
 anyhow = "1"
 thiserror= "1"
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
