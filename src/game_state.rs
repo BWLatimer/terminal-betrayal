@@ -18,12 +18,24 @@ pub struct GameState {
 }
 
 impl GameState {
+
+    pub fn new(house: House, player: Player, registry: ItemRegistry, monsters: MonsterRegistry, events: EventQueue, room_events: RoomEventRegistry) -> GameState {
+        GameState {house, player, registry, monsters, events, room_events}
+    }
+
     pub fn attack(&mut self, monster_id: MonsterId, monster_attacks_first: bool) -> (CombatOutcome, Vec<String>) {
         let monster = self.monsters.monster_mut(monster_id)
             .expect("attack called on a monster that doesn't exist");
         let (outcome, log) = resolve_round(&mut self.player, monster, monster_attacks_first);
-        if let CombatOutcome::PlayerWon = outcome {
-            self.monsters.remove_monster(monster_id);
+        match outcome {
+            CombatOutcome::PlayerWon => {
+                self.monsters.remove_monster(monster_id);
+            }
+            CombatOutcome::PlayerDefeated => {
+                self.respawn_player();
+            }
+            CombatOutcome::Ongoing => {}
+            CombatOutcome::PlayerFled => {}
         }
         (outcome, log)
     }
@@ -72,10 +84,6 @@ impl GameState {
         self.player.moves_remaining = self.player.speed;
     }
 
-    pub fn new(house: House, player: Player, registry: ItemRegistry, monsters: MonsterRegistry, events: EventQueue, room_events: RoomEventRegistry) -> GameState {
-        GameState {house, player, registry, monsters, events, room_events}
-    }
-
     pub fn current_room(&self) -> Result<&Room, HouseError> {
         self.house.room(self.player.current_room)
     }
@@ -95,6 +103,10 @@ impl GameState {
         Ok(())
     }
 
+    pub fn respawn_player(&mut self) {
+        self.player.current_room = RoomId(0);
+        self.player.health = self.player.max_health / 2;
+    }
     pub fn pick_up_item(&mut self, item_id: ItemId) -> Result<(), ItemError> {
         let current = Owner::Room(self.player.current_room);
         if self.registry.owner_of(item_id) != Some(current) {

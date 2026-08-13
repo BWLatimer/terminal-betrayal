@@ -13,6 +13,7 @@ pub struct Player {
     pub strength: i32,
     pub speed: i32,
     pub moves_remaining: i32,
+    pub max_health: i32,
 }
 
 #[derive(Deserialize)]
@@ -42,7 +43,8 @@ pub enum MoveError {
 impl Player {
     pub fn new(name: String, start: RoomId, health: i32, strength: i32, speed: i32) -> Player {
         let speed_to_moves = speed.clone();
-        Player { name, current_room: start, found_item: None, health, strength, speed, moves_remaining: speed_to_moves}
+        let player_max_health = health.clone();
+        Player { name, current_room: start, found_item: None, health, strength, speed, moves_remaining: speed_to_moves, max_health: player_max_health }
     }
 
     pub fn move_player(&mut self, house: &House, dir: Direction) -> Result <(), MoveError> {

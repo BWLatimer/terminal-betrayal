@@ -172,7 +172,11 @@ impl App {
                 match outcome {
                     crate::combat::CombatOutcome::PlayerWon => {
                         app.mode = AppMode::Exploring;
-                    }       
+                    }
+                    crate::combat::CombatOutcome::PlayerDefeated => {
+                        app.mode = AppMode::Exploring;
+                        
+                    }
                     crate::combat::CombatOutcome::Ongoing => {}
                     crate::combat::CombatOutcome::PlayerFled => {
                         app.mode = AppMode::Exploring;
