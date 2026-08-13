@@ -97,14 +97,18 @@ fn new_monsters(config: &monster::MonsterConfig) -> anyhow::Result<MonsterRegist
     let mut monsters = MonsterRegistry::new();
     let zombie_template = find_template(config, "Zombie")
         .ok_or_else(|| anyhow::anyhow!("no 'Zombie' template found in monster.toml"))?;
+    let skeleton_template = find_template(config, "Skeleton")
+        .ok_or_else(|| anyhow::anyhow!("no 'Skeleton' template found in monster.toml"))?;
     monsters.add_monster_instance(zombie_template.spawn(MonsterId(0), None)); 
     //None option spawns via room event
+    monsters.add_monster_instance(skeleton_template.spawn(MonsterId(1), None));
     Ok(monsters)
 }
 
 fn spawn() -> RoomEventRegistry {
     let mut room_event = RoomEventRegistry::new();
     room_event.add_event(RoomId(6), RoomEventKind::SpawnMonster(MonsterId(0)));
+    room_event.add_event(RoomId(8), RoomEventKind::SpawnMonster(MonsterId(1)));
     room_event
 }
 
