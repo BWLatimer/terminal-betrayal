@@ -1,0 +1,17 @@
+[[monster]]
+name = "Zombie"
+health = 15
+strength = 3
+speed = 1
+
+[[monster]]
+name = "Skeleton"
+health = 7
+strength = 2
+speed = 2
+
+[[monster]]
+name = "Blood Moon Lich"
+health = 35
+strength = 5
+speed = 4

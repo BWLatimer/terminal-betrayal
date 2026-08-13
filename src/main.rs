@@ -11,7 +11,7 @@ mod map_state;
 mod item;
 use item::{ItemRegistry, Item, ItemId};
 mod monster;
-use monster::{MonsterRegistry, MonsterId, Monster};
+use monster::{MonsterRegistry, MonsterId, MonsterConfig, MonsterTemplate};
 mod event;
 use event::{EventQueue, GameEvent};
 mod room_event;
@@ -78,18 +78,31 @@ fn load_player_config() -> anyhow::Result<PlayerConfig> {
     Ok(config)
 }
 
+fn load_monster_config() -> anyhow::Result<MonsterConfig> {
+    let toml_str = std::fs::read_to_string("assets/monster.toml")?;
+    let config: monster::MonsterConfig = toml::from_str(&toml_str)?;
+    Ok(config)
+}
+
+fn find_template<'a>(config: &'a MonsterConfig, name: &str) -> Option<&'a MonsterTemplate> {
+    config.monster.iter().find(|t| t.name == name)
+}
+
 fn create_player(config: PlayerConfig) -> Player {
     let player = Player::new(config.name, RoomId(0), config.health, config.strength, config.speed);
     player
 }
 
-pub fn new_monsters() -> MonsterRegistry {
+fn new_monsters(config: &monster::MonsterConfig) -> anyhow::Result<MonsterRegistry> {
     let mut monsters = MonsterRegistry::new();
-    monsters.add_monster(MonsterId(0), "Zombie", None, 15, 2, 1);
-    monsters
+    let zombie_template = find_template(config, "Zombie")
+        .ok_or_else(|| anyhow::anyhow!("no 'Zombie' template found in monster.toml"))?;
+    monsters.add_monster_instance(zombie_template.spawn(MonsterId(0), None)); 
+    //None option spawns via room event
+    Ok(monsters)
 }
 
-pub fn basement_spawn() -> RoomEventRegistry {
+fn spawn() -> RoomEventRegistry {
     let mut room_event = RoomEventRegistry::new();
     room_event.add_event(RoomId(6), RoomEventKind::SpawnMonster(MonsterId(0)));
     room_event
@@ -101,9 +114,10 @@ fn main() -> anyhow::Result<()> {
     let player_config = load_player_config()?;
     let player = create_player(player_config);
     let registry = new_registry();
-    let monsters = new_monsters();
+    let monster_config = load_monster_config()?;
+    let monsters = new_monsters(&monster_config)?;
     let events = EventQueue::new();
-    let room_event = basement_spawn();
+    let room_event = spawn();
     let mut game_state = GameState::new(house, player, registry, monsters, events, room_event);
     let mut app = App::new_game(game_state, app::AppMode::Exploring);
 

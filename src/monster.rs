@@ -2,9 +2,36 @@
 use crate::house::{RoomId, House};
 use std::collections::HashMap;
 use thiserror::Error;
+use serde::Deserialize;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct MonsterId(pub usize);
+
+#[derive(Deserialize)]
+pub struct MonsterTemplate {
+    pub name: String,
+    pub health: i32,
+    pub strength: i32,
+    pub speed: i32,
+}
+
+impl MonsterTemplate {
+    pub fn spawn(&self, id: MonsterId, room: Option<RoomId>) -> Monster {
+        Monster {
+            id,
+            name: self.name.clone(),
+            current_room: room,
+            health: self.health,
+            strength: self.strength,
+            speed: self.speed,
+        }
+    }
+}
+
+#[derive(Deserialize)]
+pub struct MonsterConfig {
+    pub monster: Vec<MonsterTemplate>,
+}
 
 #[derive(Debug, Clone)]
 pub struct Monster {
@@ -32,8 +59,8 @@ impl MonsterRegistry {
         MonsterRegistry { monsters: HashMap::new() }
     }
 
-    pub fn add_monster(&mut self, id: MonsterId, name: &str, room: Option<RoomId>, health: i32, strength: i32, speed: i32) {
-        self.monsters.insert(id, Monster { id, name: name.to_string(), current_room: room, health, strength, speed});
+    pub fn add_monster_instance(&mut self, monster: Monster) {
+        self.monsters.insert(monster.id, monster);
     }
 
     pub fn remove_monster(&mut self, id: MonsterId) {
