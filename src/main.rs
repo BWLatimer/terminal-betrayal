@@ -122,7 +122,7 @@ fn main() -> anyhow::Result<()> {
     let monsters = new_monsters(&monster_config)?;
     let events = EventQueue::new();
     let room_event = spawn();
-    let mut game_state = GameState::new(house, player, registry, monsters, events, room_event);
+    let mut game_state = GameState::new(house, player, registry, monsters, events, room_event, None);
     let mut app = App::new_game(game_state, app::AppMode::Exploring);
 
     let mut terminal = ratatui::init();

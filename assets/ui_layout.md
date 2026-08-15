@@ -9,10 +9,10 @@
 |> what you   |                                                                                |                             |
 |> know       |                                                                                |_____________________________|
 |>"how to win"|                                                                                | Log:                        |
-|             |                                                                                |                             |
-|             |                                                                                |                             |
-|             |                                                                                |                             |
-|             |                                                                                |                             |
+|             |                                                                                |     - message queue         |
+|             |                                                                                |     - that records actions  |
+|             |                                                                                |     - and events            |
+|             |                                                                                |     - is scrollable         |
 |             |                                                                                |                             |
 |             |                                                                                |                             |
 |             |                                                                                |                             |

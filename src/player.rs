@@ -12,6 +12,9 @@ pub struct Player {
     pub health: i32,
     pub strength: i32,
     pub speed: i32,
+//    pub knowledge: i32,
+//    pub sanity: i32,
+//    pub magic: i32,
     pub moves_remaining: i32,
     pub max_health: i32,
 }
@@ -22,6 +25,9 @@ pub struct PlayerConfig {
     pub health: i32,
     pub strength: i32,
     pub speed: i32,
+//    pub knowledge: i32,
+//    pub sanity: i32,
+//    pub magic: i32,
 }
 
 #[derive(Debug, Error)]

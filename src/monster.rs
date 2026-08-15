@@ -24,6 +24,7 @@ impl MonsterTemplate {
             health: self.health,
             strength: self.strength,
             speed: self.speed,
+            max_health: self.health.clone(),
         }
     }
 }
@@ -40,7 +41,8 @@ pub struct Monster {
     pub current_room: Option<RoomId>,
     pub strength: i32,
     pub health: i32,
-    pub speed: i32
+    pub speed: i32,
+    pub max_health: i32,
     //TODO: add in other identifiers or attributes
 }
 

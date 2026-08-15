@@ -5,7 +5,7 @@ use crate::item::{ItemId, Item, ItemError, Owner, ItemRegistry};
 use crate::monster::{MonsterRegistry, MonsterId, Monster};
 use crate::event::{GameEvent, EventQueue};
 use crate::room_event::{RoomEventRegistry, RoomEventKind};
-use crate::combat::{CombatOutcome, resolve_round};
+use crate::combat::{CombatOutcome, resolve_round, resolve_flee, flee_drops_item};
 use std::collections::HashMap;
 
 pub struct GameState {
@@ -15,12 +15,13 @@ pub struct GameState {
     pub monsters: MonsterRegistry,
     pub events: EventQueue,
     pub room_events: RoomEventRegistry,
+    pub pending_ambush: Option<MonsterId>
 }
 
 impl GameState {
 
-    pub fn new(house: House, player: Player, registry: ItemRegistry, monsters: MonsterRegistry, events: EventQueue, room_events: RoomEventRegistry) -> GameState {
-        GameState {house, player, registry, monsters, events, room_events}
+    pub fn new(house: House, player: Player, registry: ItemRegistry, monsters: MonsterRegistry, events: EventQueue, room_events: RoomEventRegistry, pending_ambush: Option<MonsterId>) -> GameState {
+        GameState {house, player, registry, monsters, events, room_events, pending_ambush: None}
     }
 
     pub fn attack(&mut self, monster_id: MonsterId, monster_attacks_first: bool) -> (CombatOutcome, Vec<String>) {
@@ -40,28 +41,48 @@ impl GameState {
         (outcome, log)
     }
 
+    pub fn flee(&mut self, monster_id: MonsterId) -> Vec<String> {
+        let monster = self.monsters.monster(monster_id)
+            .expect("flee called on a monster that doesn't exist");
+        let mut log = resolve_flee(&mut self.player, monster);
+        
+        if flee_drops_item() {
+            let carried = self.registry.items_owned_by(Owner::Player);
+            if let Some(&item_id) = carried.first() {
+                let name = self.registry.name_of(item_id).unwrap_or("something").to_string();
+                self.registry.assign(item_id, Owner::Room(self.player.current_room));
+                log.push(format!("You drop your {} in the panic!", name));
+            }
+        }
+        log
+    }
+
     pub fn process_events(&mut self) -> Vec<String> {
         let events = self.events.drain();
         let mut notices = Vec::new();
         for event in events {
             match event {
                 GameEvent::PlayerMoved { to, .. } => {
-                    if let Some(kind) = self.room_events.room_check(to) {
+                    let mut spawned_this_turn = false;
+
+                    if let Some(kind) = self.room_events.check_and_trigger(to) {
                         match kind {
                             RoomEventKind::SpawnMonster(monster_id) => {
                                 self.monsters.move_to(monster_id, to);
                                 notices.push("Something lurches out of the shadows!".to_string());
+                                spawned_this_turn = true;
                             }
                         }
-                        self.end_turn();
-                    } else {
-                         let monster_ids: Vec<MonsterId> = self.monsters.monsters_in(to)
+                    }
+                    let monsters_here: Vec<MonsterId> = self.monsters.monsters_in(to)
                         .iter().map(|m| m.id).collect();
-                        for id in monster_ids {
-                            let name: String = self.monsters.monster(id).iter().map(|m| m.name.clone()).collect();
+                    if let Some(&monster_id) = monsters_here.first() {
+                        if !spawned_this_turn {
+                            let name: String = self.monsters.monster(monster_id).iter().map(|m| m.name.clone()).collect();
                             notices.push(format!("a {} notices you", name)); //enter id, return Monster
                         }
-                    } 
+                        self.pending_ambush = Some(monster_id);
+                    }
                 }
             }
         }

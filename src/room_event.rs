@@ -22,7 +22,7 @@ impl RoomEventRegistry {
         self.events.insert(room, kind);
     }
 
-    pub fn room_check(&mut self, room: RoomId) -> Option<RoomEventKind> {
+    pub fn check_and_trigger(&mut self, room: RoomId) -> Option<RoomEventKind> {
         self.events.remove(&room)    
     }
 }

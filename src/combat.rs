@@ -14,7 +14,24 @@ pub enum CombatOutcome {
         let roll = rand::thread_rng().gen_range(1..=12);
         roll <= speed
     }
-        
+    
+    pub fn resolve_flee(player: &mut Player, monster: &Monster) -> Vec<String> {
+        let mut log = Vec::new();
+        log.push("You turn to flee!".to_string());
+
+        if dodge_succeeds(player.speed) {
+            log.push("You slip away unharmed".to_string());
+        } else {
+            player.health -= monster.strength;
+            log.push(format!("The {} gets a parting shot in for {} damage!", monster.name, monster.strength));
+        }
+        log
+    }
+    
+    pub fn flee_drops_item() -> bool {
+        rand::thread_rng().gen_bool(0.25)
+    }
+    
     pub fn resolve_round(player: &mut Player, monster: &mut Monster, monster_attacks_first: bool) -> (CombatOutcome, Vec<String>) {
         let mut log = Vec::new();
     

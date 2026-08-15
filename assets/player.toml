@@ -1,4 +1,7 @@
-name = "Adventurer"
-health = 20
-strength = 3
-speed = 5
+name = "Bryce"
+health = 10
+strength = 5
+speed = 4
+knowledge = 4
+sanity = 3
+magic = 1

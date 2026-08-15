@@ -107,7 +107,7 @@ impl App {
                         Ok(()) => app.message = "Picked it up.".to_string(),
                         Err(_) => app.message = "Couldn't pick that up.".to_string(),
                     },
-                    None => app.message = "Nothing to pick up — search first with '?'.".to_string(),
+                    None => app.message = "Nothing to pick up — search first with 's'.".to_string(),
                 };
                 return;
             }
@@ -153,41 +153,16 @@ impl App {
                     if !notices.is_empty() {
                         app.message = notices.join("\n");
                     }
+                    if let Some(monster_id) = app.game_state.pending_ambush.take() {
+                        app.mode = AppMode::Combat(CombatState {
+                            monster_id,
+                            monster_attacks_first: true,
+                            menu: CombatMenu::Main,
+                        });
+                    }
                 }
                 Err(_) => app.message = "I think that's a wall...\nMaybe try another direction?".to_string(),
-            },
-        }
-    }
-
-    pub fn handle_combat_key(app: &mut Self, key: crossterm::event::KeyEvent) {
-        let (monster_id, monster_attacks_first) = match &app.mode {
-            AppMode::Combat(state) => (state.monster_id, state.monster_attacks_first),
-            AppMode::Exploring => return,
-        };
-
-        match key.code {
-           crossterm::event::KeyCode::Char('f') => {
-                let (outcome, log) = app.game_state.attack(monster_id, monster_attacks_first);
-                app.message = log.join("\n");
-                match outcome {
-                    crate::combat::CombatOutcome::PlayerWon => {
-                        app.mode = AppMode::Exploring;
-                    }
-                    crate::combat::CombatOutcome::PlayerDefeated => {
-                        app.mode = AppMode::Exploring;
-                        
-                    }
-                    crate::combat::CombatOutcome::Ongoing => {}
-                    crate::combat::CombatOutcome::PlayerFled => {
-                        app.mode = AppMode::Exploring;
-                    }
-                }
             }
-            crossterm::event::KeyCode::Char('r') => {
-                app.message = "You flee the fight!".to_string();
-                app.mode = AppMode::Exploring;
-            }
-            _ => {}
         }
     }
 
@@ -216,8 +191,8 @@ impl App {
 
     pub fn render_map(frame: &mut ratatui::Frame, area: ratatui::layout::Rect, app: &Self) {
         let positions = room_positions();
-        let cell_width = 12;
-        let cell_height = 6;
+        let cell_width = 6;
+        let cell_height = 3;
 
         for (room_id, (x, y)) in &positions {
             let rect = ratatui::layout::Rect {
@@ -271,13 +246,16 @@ impl App {
         Self::render_player_stats(frame, left_col[0], app);
         Self::render_map(frame, right_col[1], app);
         Self::render_inventory(frame, left_col[1], app);
+        if let AppMode::Combat(state) = &app.mode {
+            Self::render_combat_popup(frame, app, state);
+        }
         let monster_names: Vec<String> = app.game_state.monsters.monsters_in(app.game_state.player.current_room)
                 .iter().map(|m| m.name.clone()).collect();
         let monster_line = if monster_names.is_empty() {
-                String::new()
-            } else {
-                format!("\nA {} growls, chained in the corner.", monster_names.join(", "))
-            };
+            String::new()
+        } else {
+            format!("\nA {} growls, chained in the corner.", monster_names.join(", "))
+        };
         let room = app.game_state.current_room().expect("current room should be valid");
         let exits: Vec<String> = room.exits.iter().map(|(d, _)| format!("{:?}", d)).collect();
         let room_map = format!("Location: {}\nExits: {}{}\n", room.name, exits.join(", "), monster_line);
@@ -288,5 +266,77 @@ impl App {
         let app_log_paragraph = ratatui::widgets::Paragraph::new(app_log)
             .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL).title("Log:"));
         frame.render_widget(app_log_paragraph, left_col[2]);
+    }
+
+    pub fn handle_combat_key(app: &mut Self, key: crossterm::event::KeyEvent) {
+        let (monster_id, monster_attacks_first) = match &app.mode {
+            AppMode::Combat(state) => (state.monster_id, state.monster_attacks_first),
+            AppMode::Exploring => return,
+        };
+
+        match key.code {
+           crossterm::event::KeyCode::Char('f') => {
+                let (outcome, log) = app.game_state.attack(monster_id, monster_attacks_first);
+                app.message = log.join("\n");
+                match outcome {
+                    crate::combat::CombatOutcome::PlayerWon => {
+                        app.mode = AppMode::Exploring;
+                    }
+                    crate::combat::CombatOutcome::PlayerDefeated => {
+                        app.mode = AppMode::Exploring;
+                        
+                    }
+                    crate::combat::CombatOutcome::Ongoing => {}
+                    crate::combat::CombatOutcome::PlayerFled => {
+                        app.mode = AppMode::Exploring;
+                    }
+                }
+            }
+            crossterm::event::KeyCode::Char('r') => {
+                let log = app.game_state.flee(monster_id);
+                app.message = log.join("\n");
+                app.mode = AppMode::Exploring;
+            }
+            _ => {}
+        }
+    }
+
+    pub fn centered_rect(percent_x: u16, percent_y: u16, area: ratatui::layout::Rect) -> ratatui::layout::Rect {
+        let popup_layout = Layout::default()
+            .direction(LayoutDirection::Vertical)
+            .constraints([
+                Constraint::Percentage((100 - percent_y) /2),
+                Constraint::Percentage(percent_y),
+                Constraint::Percentage((100 - percent_y) / 2),
+            ])
+            .split(area);
+        Layout::default()
+            .direction(LayoutDirection::Horizontal)
+            .constraints([
+                Constraint::Percentage((100 - percent_x) /2),
+                Constraint::Percentage(percent_x),
+                Constraint::Percentage((100-percent_x) / 2),
+            ])
+            .split(popup_layout[1])[1]
+    }
+
+    fn render_combat_popup(frame: &mut ratatui::Frame, app: &App, state: &CombatState) {
+        let popup_area = Self::centered_rect(50, 40, frame.area());
+        frame.render_widget(ratatui::widgets::Clear, popup_area);
+        let monster = app.game_state.monsters.monster(state.monster_id);
+        let text = match monster {
+            Ok(m) => format!(
+                "COMBAT!\n\n{}: {}/{} HP\n{}: {}/{} HP\n\n[f] Fight    [r] Flee", app.game_state.player.name, app.game_state.player.health, app.game_state.player.max_health, m.name, m.health, m.max_health,
+            ),
+            Err(_) => "COMBAT!".to_string(),
+        };
+
+        let popup = ratatui::widgets::Paragraph::new(text)
+            .alignment(ratatui::layout::Alignment::Center)
+            .block(ratatui::widgets::Block::default()
+                .borders(ratatui::widgets::Borders::ALL)
+                .border_style(ratatui::style::Style::default().fg(ratatui::style::Color::Red))
+                .title("FIGHT!"));
+        frame.render_widget(popup, popup_area);
     }
 }
