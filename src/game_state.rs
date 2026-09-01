@@ -68,7 +68,7 @@ impl GameState {
                     if let Some(kind) = self.room_events.check_and_trigger(to) {
                         match kind {
                             RoomEventKind::SpawnMonster(monster_id) => {
-                                self.monsters.move_to(monster_id, to);
+                                 self.monsters.move_to(monster_id, to);
                                 notices.push("Something lurches out of the shadows!".to_string());
                                 spawned_this_turn = true;
                             }

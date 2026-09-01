@@ -7,6 +7,8 @@ mod game_state;
 use game_state::{GameState};
 mod app;
 use app::{App};
+mod engine;
+use engine::{GameEngine, GameUpdate, GameError};
 mod map_state;
 mod item;
 use item::{ItemRegistry, Item, ItemId};
@@ -61,9 +63,9 @@ pub fn build_house() -> House {
         .expect("Failed to connect Staircase to 2nd floor landing");
     House::connect_two_way(&mut house, RoomId(7), Direction::East, RoomId(3))
         .expect("Failed to connect landing to Library");
-    House::connect(&mut house, RoomId(3), Direction::South, RoomId(6))
+    House::connect_two_way(&mut house, RoomId(3), Direction::South, RoomId(6))
         .expect("Failed to connect Library to Basement");
-    House::connect(&mut house, RoomId(6), Direction::South, RoomId(2))
+    House::connect_two_way(&mut house, RoomId(6), Direction::South, RoomId(2))
         .expect("Failed to connect Basement to Kitchen");
     House::connect_two_way(&mut house, RoomId(7), Direction::West, RoomId(4))
         .expect("Failed to connect landing to Master Bedroom");
@@ -123,7 +125,8 @@ fn main() -> anyhow::Result<()> {
     let events = EventQueue::new();
     let room_event = spawn();
     let mut game_state = GameState::new(house, player, registry, monsters, events, room_event, None);
-    let mut app = App::new_game(game_state, app::AppMode::Exploring);
+    let engine = GameEngine::new(game_state);
+    let mut app = App::new_game(engine, app::AppMode::Exploring);
 
     let mut terminal = ratatui::init();
     while !app.should_quit {

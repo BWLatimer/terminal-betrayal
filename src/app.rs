@@ -1,12 +1,13 @@
-use crate::game_state::GameState;
+use std::collections::HashMap;
+use crate::engine::{GameEngine, CombatInfo, GameUpdate, PlayerAction};
 use crate::item::Owner;
-use crate::house::Direction;
-use crate::map_state::room_positions;
+use crate::house::{House, Room, RoomId, Direction};
+use crate::map_state;
 use crate::monster::MonsterId;
 use ratatui::layout::{Layout, Constraint, Direction as LayoutDirection};
 
 pub struct App {
-    pub game_state: GameState,
+    pub engine: GameEngine,
     pub mode: AppMode,
     pub message: String,
     pub should_quit: bool,
@@ -16,7 +17,7 @@ pub struct App {
 pub struct CombatState {
     pub monster_id: MonsterId,
     pub monster_attacks_first: bool,
-    pub menu: CombatMenu,
+    pub state: CombatMenu,
 }
 
 pub enum CombatMenu {
@@ -30,10 +31,10 @@ pub enum AppMode {
 }
 
 impl App {
-    pub fn new_game(game_state: GameState, mode: AppMode) -> App {
+    pub fn new_game(engine: GameEngine, mode: AppMode) -> App {
 
         App{
-            game_state,
+            engine,
             mode,
             message: String::new(),
             should_quit: false,
@@ -73,48 +74,22 @@ impl App {
             }
             
             crossterm::event::KeyCode::Char('f') => {
-                let monsters_here = app.game_state.monsters.monsters_in(app.game_state.player.current_room);
-                match monsters_here.first() {
-                    Some(monster) => {
-                        let monster_id = monster.id;
-                        app.mode = AppMode::Combat(CombatState {
-                            monster_id,
-                            monster_attacks_first: true,
-                            menu: CombatMenu::Main,
-                        });
-                        app.message = format!("A {} blocks your path!", monster.name);
-                    }
-                    None => app.message = "There's nothing to fight here.".to_string(),
-                }
+                app.engine.apply_action(PlayerAction::EngageMonster);
                 return;
             }
 
             crossterm::event::KeyCode::Char('s') => {
-                match app.game_state.player.search_room(&app.game_state.registry) {
-                    Ok(()) => {
-                        let item_id = app.game_state.player.found_item
-                            .expect("search_room set found_item on Ok");
-                        let name = app.game_state.registry.name_of(item_id).unwrap_or("something");
-                        app.message = format!("You found: {}", name);
-                    }
-                    Err(_) => app.message = "There's nothing here.".to_string(),
-                };
+                app.engine.apply_action(PlayerAction::Search);
                 return;
             }
             crossterm::event::KeyCode::Char('a') => {
-                match app.game_state.player.found_item {
-                    Some(item_id) => match app.game_state.pick_up_item(item_id) {
-                        Ok(()) => app.message = "Picked it up.".to_string(),
-                        Err(_) => app.message = "Couldn't pick that up.".to_string(),
-                    },
-                    None => app.message = "Nothing to pick up — search first with 's'.".to_string(),
-                };
+                app.engine.apply_action(PlayerAction::PickUp);
                 return;
             }
             crossterm::event::KeyCode::Char('d') => {
                 match app.inventory_state.selected() {
                     Some(index) => {
-                        let items = app.game_state.registry.items_owned_by(Owner::Player);
+                        let items = app.engine.game_state.registry.items_owned_by(Owner::Player);
                         match items.get(index) {
                             Some(item_id) => match app.game_state.drop_item(*item_id) {
                                 Ok(()) => app.message = "Dropped it.".to_string(),
@@ -129,145 +104,33 @@ impl App {
             }
             
             crossterm::event::KeyCode::Char(' ') => {
-                app.game_state.end_turn();
-                app.message = "you end your turn".to_string();
+                app.engine.apply_action(PlayerAction::EndTurn);
                 return;
             }
-            _ => {}
-        }
 
-        let dir =  match key.code {
-            crossterm::event::KeyCode::Up => Some(Direction::North),
-            crossterm::event::KeyCode::Down => Some(Direction::South),
-            crossterm::event::KeyCode::Right => Some(Direction::East),
-            crossterm::event::KeyCode::Left => Some(Direction::West),
-            crossterm::event::KeyCode::Char('q') => { app.should_quit = true; return; }
-            _ => None,
-        };
-        match dir {
-            None => { app.message = "Oops! That's not an available direction. \nPlease use arrow keys or q.".to_string() },
-            Some(d) => match app.game_state.move_player(d) {
-                Ok(()) => {
-                    app.message.clear();
-                    let notices = app.game_state.process_events();
-                    if !notices.is_empty() {
-                        app.message = notices.join("\n");
-                    }
-                    if let Some(monster_id) = app.game_state.pending_ambush.take() {
-                        app.mode = AppMode::Combat(CombatState {
-                            monster_id,
-                            monster_attacks_first: true,
-                            menu: CombatMenu::Main,
-                        });
-                    }
-                }
-                Err(_) => app.message = "I think that's a wall...\nMaybe try another direction?".to_string(),
+            crossterm::event::KeyCode::Up => {
+                app.engine.apply_action(PlayerAction::Move(Direction::North));
+                return;
             }
+
+            crossterm::event::KeyCode::Down => {
+                app.engine.apply_action(PlayerAction::Move(Direction::South));
+                return;
+            }
+
+            crossterm::event::KeyCode::Right => {
+                app.engine.apply_action(PlayerAction::Move(Direction::East));
+                return;
+            }
+
+            crossterm::event::KeyCode::Left => {
+                app.engine.apply_action(PlayerAction::Move(Direction::West));
+                return;
+            }
+
+            _ => {};
         }
     }
-
-    pub fn render_player_stats(frame: &mut ratatui::Frame, area: ratatui::layout::Rect, app: &Self) {
-        let player_stats = format!("hp:{}\nstr: {} sp: {}\nMoves Remaining: {}", app.game_state.player.health, app.game_state.player.strength, app.game_state.player.speed, app.game_state.player.moves_remaining);
-        let player_paragraph = ratatui::widgets::Paragraph::new(player_stats)
-            .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL).title(app.game_state.player.name.to_string()));
-        frame.render_widget(player_paragraph, area);
-    }
-
-    pub fn render_inventory(frame: &mut ratatui::Frame, area: ratatui::layout::Rect, app: &mut Self) {
-        let item_ids = app.game_state.registry.items_owned_by(Owner::Player);
-        let list_items: Vec<ratatui::widgets::ListItem> = item_ids.iter()
-            .map(|id| {
-                let name = app.game_state.registry.name_of(*id).unwrap_or("something");
-                ratatui::widgets::ListItem::new(name.to_string())
-            })
-            .collect();
-        
-        let list = ratatui::widgets::List::new(list_items)
-            .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL).title("Inventory"))
-            .highlight_style(ratatui::style::Style::default().fg(ratatui::style::Color::Yellow))
-            .highlight_symbol("> ");
-        frame.render_stateful_widget(list, area, &mut app.inventory_state);
-    }
-
-    pub fn render_map(frame: &mut ratatui::Frame, area: ratatui::layout::Rect, app: &Self) {
-        let positions = room_positions();
-        let cell_width = 6;
-        let cell_height = 3;
-
-        for (room_id, (x, y)) in &positions {
-            let rect = ratatui::layout::Rect {
-                x: area.x + (*x as u16) * cell_width,
-                y: area.y + (*y as u16) * cell_height,
-                width: cell_width,
-                height: cell_height,
-            };
-
-            let highlighted_style = ratatui::style::Style::default().fg(ratatui::style::Color::Yellow);
-            let normal_style = ratatui::style::Style::default().fg(ratatui::style::Color::White);
-            
-            let style = if *room_id == app.game_state.player.current_room {
-                highlighted_style
-            } else {
-                normal_style
-            };
-            let room_names = app.game_state.house.room(*room_id).expect("current room should always be valid");
-            let house_map = format!("{}", room_names.name);
-            let house_map_paragraph = ratatui::widgets::Paragraph::new(house_map)
-                .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL)
-                .border_style(style));
-            frame.render_widget(house_map_paragraph, rect);
-        }
-    }
-
-    pub fn render(frame: &mut ratatui::Frame, app: &mut App) {
-        let cols = Layout::default()
-            .direction(LayoutDirection::Horizontal)
-            .constraints([
-                Constraint::Percentage(70),
-                Constraint::Percentage(30),
-            ])
-            .split(frame.area());
-        let left_col = Layout::default()
-            .direction(LayoutDirection::Vertical)
-            .constraints([
-                Constraint::Min(6),
-                Constraint::Percentage(15),
-                Constraint::Percentage(70),
-            ])
-            .split(cols[1]);
-        let right_col = Layout::default()
-            .direction(LayoutDirection::Vertical)
-            .constraints([
-                Constraint::Percentage(30),
-                Constraint::Percentage(70),
-            ])
-            .split(cols[0]);
-        
-        Self::render_player_stats(frame, left_col[0], app);
-        Self::render_map(frame, right_col[1], app);
-        Self::render_inventory(frame, left_col[1], app);
-        if let AppMode::Combat(state) = &app.mode {
-            Self::render_combat_popup(frame, app, state);
-        }
-        let monster_names: Vec<String> = app.game_state.monsters.monsters_in(app.game_state.player.current_room)
-                .iter().map(|m| m.name.clone()).collect();
-        let monster_line = if monster_names.is_empty() {
-            String::new()
-        } else {
-            format!("\nA {} growls, chained in the corner.", monster_names.join(", "))
-        };
-        let room = app.game_state.current_room().expect("current room should be valid");
-        let exits: Vec<String> = room.exits.iter().map(|(d, _)| format!("{:?}", d)).collect();
-        let room_map = format!("Location: {}\nExits: {}{}\n", room.name, exits.join(", "), monster_line);
-        let app_log = format!("{}\n", app.message);
-        let rm_map_paragraph = ratatui::widgets::Paragraph::new(room_map)
-            .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL).title("Terminal Betrayal"));
-        frame.render_widget(rm_map_paragraph, right_col[0]);
-        let app_log_paragraph = ratatui::widgets::Paragraph::new(app_log)
-            .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL).title("Log:"));
-        frame.render_widget(app_log_paragraph, left_col[2]);
-    }
-
     pub fn handle_combat_key(app: &mut Self, key: crossterm::event::KeyEvent) {
         let (monster_id, monster_attacks_first) = match &app.mode {
             AppMode::Combat(state) => (state.monster_id, state.monster_attacks_first),
@@ -293,50 +156,208 @@ impl App {
                 }
             }
             crossterm::event::KeyCode::Char('r') => {
-                let log = app.game_state.flee(monster_id);
-                app.message = log.join("\n");
+                self.engine.apply_action(PlayerAction::Flee);
                 app.mode = AppMode::Exploring;
             }
             _ => {}
         }
     }
 
+
+
+
+    //data groupings to render
+    pub fn render_player_stats(frame: &mut ratatui::Frame, area: ratatui::layout::Rect, app: &Self) {
+        let chunks = Layout::default()
+            .direction(LayoutDirection::Vertical)
+            .constraints([
+                Constraint::Percentage(5),
+                Constraint::Percentage(35),
+                Constraint::Percentage(60),
+            ])
+            .split(area);
+        let columns = Layout::default()
+            .direction(LayoutDirection::Horizontal)
+            .constraints([
+                Constraint::Percentage(5),
+                Constraint::Percentage(90),
+                Constraint::Percentage(5),
+            ])
+            .split(chunks[2]);
+
+        let hp_ratio = (app.game_state.player.health.max(0) as f64) / (app.game_state.player.max_health as f64);
+        let hp_gauge = ratatui::widgets::Gauge::default()
+            .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL))
+            .gauge_style(ratatui::style::Style::default().fg(ratatui::style::Color::Red))
+            .ratio(hp_ratio)
+            .label(format!("\n  {}/{} HP", app.game_state.player.health, app.game_state.player.max_health));
+        frame.render_widget(hp_gauge, chunks[1]);
+
+        let player_stats = format!("\n  strength: {} \n  speed: {}\n  Moves Remaining: {}", app.game_state.player.strength, app.game_state.player.speed, app.game_state.player.moves_remaining);
+        let player_paragraph = ratatui::widgets::Paragraph::new(player_stats);
+        frame.render_widget(player_paragraph, columns[1]);
+
+       let outer_block = ratatui::widgets::Block::default()
+            .borders(ratatui::widgets::Borders::ALL)
+            .title(app.game_state.player.name.to_string());
+       frame.render_widget(outer_block, area);
+    }
+
+    pub fn render_inventory(frame: &mut ratatui::Frame, area: ratatui::layout::Rect, app: &mut Self) {
+        let item_ids = app.game_state.registry.items_owned_by(Owner::Player);
+        let list_items: Vec<ratatui::widgets::ListItem> = item_ids.iter()
+            .map(|id| {
+                let name = app.game_state.registry.name_of(*id).unwrap_or("something");
+                ratatui::widgets::ListItem::new(name.to_string())
+            })
+            .collect();
+        
+        let list = ratatui::widgets::List::new(list_items)
+            .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL).title("Inventory"))
+            .highlight_style(ratatui::style::Style::default().fg(ratatui::style::Color::Yellow))
+            .highlight_symbol("> ");
+        frame.render_stateful_widget(list, area, &mut app.inventory_state);
+    }
+
+     fn render_log(frame: &mut ratatui::Frame, area: ratatui::layout::Rect, app: &mut Self) {
+        let monster_names: Vec<String> = app.game_state.monsters.monsters_in(app.game_state.player.current_room)
+                .iter().map(|m| m.name.clone()).collect();
+        let monster_line = if monster_names.is_empty() {
+            String::new()
+        } else {
+            format!("\nA {} growls, chained in the corner.", monster_names.join(", "))
+        };
+        let room = app.game_state.current_room().expect("current room should be valid");
+        let exits: Vec<String> = room.exits.iter().map(|(d, _)| format!("{:?}", d)).collect();
+        let app_log = format!("{}\n", app.message);
+        let room_log = format!("Location: {}\nExits: {}\n{}{}\n", room.name, exits.join(", "), app_log, monster_line);
+        let app_log_paragraph = ratatui::widgets::Paragraph::new(room_log)
+            .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL).title("Log:"));
+        frame.render_widget(app_log_paragraph, area);
+    }
+
+       pub fn render_map(frame: &mut ratatui::Frame, area: ratatui::layout::Rect, app: &Self) {
+        let positions = map_state::compute_positions(&app.game_state.house, RoomId(0));
+        let (grid_w, grid_h) = map_state::grid_bounds(&positions);
+
+        let cell_width = (area.width / grid_w as u16).max(3);
+        let cell_height = (area.height / grid_h as u16).max(3);
+
+        for (room_id, (x, y)) in &positions {
+            let rect = ratatui::layout::Rect {
+                x: area.x + (*x as u16) * cell_width,
+                y: area.y + (*y as u16) * cell_height,
+                width: cell_width,
+                height: cell_height,
+            };
+
+            let highlighted_style = ratatui::style::Style::default().fg(ratatui::style::Color::Yellow);
+            let normal_style = ratatui::style::Style::default().fg(ratatui::style::Color::White);
+            
+            let style = if *room_id == app.game_state.player.current_room {
+                highlighted_style
+            } else {
+                normal_style
+            };
+            let room_names = app.game_state.house.room(*room_id).expect("current room should always be valid");
+            let house_map = format!("{}", room_names.name);
+            let house_map_paragraph = ratatui::widgets::Paragraph::new(house_map)
+                .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL)
+                .border_style(style));
+            frame.render_widget(house_map_paragraph, rect);
+        }
+    } 
+ 
+    fn render_combat_popup(frame: &mut ratatui::Frame, app: &App, state: &CombatState) {
+        let popup_area = Self::centered_rect(70, 70 ,frame.area());
+        frame.render_widget(ratatui::widgets::Clear, popup_area);
+
+        let block = ratatui::widgets::Block::default()
+            .borders(ratatui::widgets::Borders::ALL)
+            .border_style(ratatui::style::Style::default().fg(ratatui::style::Color::Red))
+            .title("FIGHT!");
+        frame.render_widget(&block, popup_area);
+        let inner = block.inner(popup_area);
+
+        let columns = Layout::default()
+            .direction(LayoutDirection::Horizontal)
+            .constraints([ Constraint::Percentage(30), Constraint::Percentage(40), Constraint::Percentage(40)])
+            .split(inner);
+        let monster_layout =  Layout::default()
+            .direction(LayoutDirection::Vertical)
+            .constraints([Constraint::Percentage(10), Constraint::Percentage(80), Constraint::Percentage(10)])
+            .split(columns[0]);
+
+
+        let monster = app.game_state.monsters.monster(state.monster_id);
+        let (m_name, m_health, m_max) = match monster {
+            Ok(m) => (m.name.clone(), m.health.max(0), m.max_health),
+            Err(_) => ("???".to_string(), 0, 1),
+        };
+
+        Self::render_player_stats(frame, columns[2], app);
+        let monster_gauge =  ratatui::widgets::Gauge::default()
+            .gauge_style(ratatui::style::Style::default().fg(ratatui::style::Color::Green))
+            .ratio(m_health as f64 / m_max as f64)
+            .label(format!("{}: {}/{} HP", m_name, m_health, m_max));
+        frame.render_widget(monster_gauge, monster_layout[0]);
+
+        let hint = ratatui::widgets::Paragraph::new("[f] Fight      [r] Flee")
+            .alignment(ratatui::layout::Alignment::Center);
+        frame.render_widget(hint, columns[1]);
+    }
+
+    //render groupings
     pub fn centered_rect(percent_x: u16, percent_y: u16, area: ratatui::layout::Rect) -> ratatui::layout::Rect {
         let popup_layout = Layout::default()
             .direction(LayoutDirection::Vertical)
             .constraints([
-                Constraint::Percentage((100 - percent_y) /2),
+                Constraint::Percentage((100 - percent_y) / 2),
                 Constraint::Percentage(percent_y),
                 Constraint::Percentage((100 - percent_y) / 2),
             ])
             .split(area);
+
         Layout::default()
             .direction(LayoutDirection::Horizontal)
             .constraints([
-                Constraint::Percentage((100 - percent_x) /2),
+                Constraint::Percentage((100 - percent_x) / 2),
                 Constraint::Percentage(percent_x),
-                Constraint::Percentage((100-percent_x) / 2),
+                Constraint::Percentage((100 - percent_x) / 2),
             ])
             .split(popup_layout[1])[1]
     }
 
-    fn render_combat_popup(frame: &mut ratatui::Frame, app: &App, state: &CombatState) {
-        let popup_area = Self::centered_rect(50, 40, frame.area());
-        frame.render_widget(ratatui::widgets::Clear, popup_area);
-        let monster = app.game_state.monsters.monster(state.monster_id);
-        let text = match monster {
-            Ok(m) => format!(
-                "COMBAT!\n\n{}: {}/{} HP\n{}: {}/{} HP\n\n[f] Fight    [r] Flee", app.game_state.player.name, app.game_state.player.health, app.game_state.player.max_health, m.name, m.health, m.max_health,
-            ),
-            Err(_) => "COMBAT!".to_string(),
-        };
+    pub fn render(frame: &mut ratatui::Frame, app: &mut App) {
+        let columns = Layout::default()
+            .direction(LayoutDirection::Horizontal)
+            .constraints([
+                Constraint::Percentage(70),
+                Constraint::Percentage(30),
+            ])
+            .split(frame.area());
+        let left = Layout::default()
+            .direction(LayoutDirection::Vertical)
+            .constraints([
+                Constraint::Percentage(70),
+                Constraint::Percentage(30),
+            ])
+            .split(columns[0]);
+        let right = Layout::default()
+            .direction(LayoutDirection::Vertical)
+            .constraints([
+                Constraint::Percentage(30),
+                Constraint::Percentage(70),
+            ])
+            .split(columns[1]);
+        
+        Self::render_map(frame, left[0], app);
+        Self::render_player_stats(frame, right[0], app);
+        Self::render_inventory(frame, right[1], app);
+        Self::render_log(frame, left[1], app);
 
-        let popup = ratatui::widgets::Paragraph::new(text)
-            .alignment(ratatui::layout::Alignment::Center)
-            .block(ratatui::widgets::Block::default()
-                .borders(ratatui::widgets::Borders::ALL)
-                .border_style(ratatui::style::Style::default().fg(ratatui::style::Color::Red))
-                .title("FIGHT!"));
-        frame.render_widget(popup, popup_area);
-    }
+        if let AppMode::Combat(state) = &app.mode {
+            Self::render_combat_popup(frame, app, state);
+        }
+    }   
 }
