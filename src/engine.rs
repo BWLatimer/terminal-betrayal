@@ -234,13 +234,12 @@ impl GameEngine {
     fn detect_ambush(&mut self) -> Vec< String >  {
         let notices = self.state.process_events();
         if !notices.is_empty() {
-            self.handle_engage_monster().expect("the hair on the back of your neck stands on end");
-        }
-        if let Some(monster_id) = self.state.pending_ambush.take() {
-            self.combat_state = Some(CombatInfo {
-                monster_id,
-                monster_attacks_first: true
-            })
+            if let Some(monster_id) = self.state.pending_ambush.take() {
+                self.combat_state = Some(CombatInfo {
+                    monster_id,
+                    monster_attacks_first: true
+                })
+            }
         };
         notices
     }
