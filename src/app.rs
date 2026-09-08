@@ -45,12 +45,12 @@ impl App {
     pub fn handle_key(app: &mut Self, key: crossterm::event::KeyEvent) {
         if let AppMode::Combat(_) = app.mode {
             Self::handle_combat_key(app, key);
-            return;
         }
     
         match key.code {
             crossterm::event::KeyCode::Tab => {
-                let count = app.game_state.registry.items_owned_by(Owner::Player).len();
+                let state = app.engine.get_state();
+                let count = state.registry.items_owned_by(Owner::Player).len();
                 if count > 0 {
                     let i = match app.inventory_state.selected() {
                         Some(i) => (i + 1) % count,
@@ -62,7 +62,7 @@ impl App {
             }
 
             crossterm::event::KeyCode::BackTab => {
-                let count = app.game_state.registry.items_owned_by(Owner::Player).len();
+                let count = app.engine.get_player_inventory().len();
                 if count > 0 {
                     let i = match app.inventory_state.selected() {
                         Some(i) => (i + count - 1) % count,
@@ -74,90 +74,199 @@ impl App {
             }
             
             crossterm::event::KeyCode::Char('f') => {
-                app.engine.apply_action(PlayerAction::EngageMonster);
-                return;
+                match app.engine.apply_action(PlayerAction::EngageMonster) {
+                    Ok(update) => {
+                        app.message = update.messages.join("\n");
+                        if let Some(monster_id) = update.pending_combat {
+                            let combat_info = app.engine.current_combat().expect("combat expected");
+                            app.mode = AppMode::Combat(CombatState {
+                                monster_id,
+                                monster_attacks_first: combat_info.monster_attacks_first,
+                                state: CombatMenu::Main,
+                            })
+                        }
+                    },
+                    Err(e) => {
+                        app.message = format!("{}", e);
+                        return;
+                    }
+                }
             }
 
             crossterm::event::KeyCode::Char('s') => {
-                app.engine.apply_action(PlayerAction::Search);
-                return;
-            }
-            crossterm::event::KeyCode::Char('a') => {
-                app.engine.apply_action(PlayerAction::PickUp);
-                return;
-            }
-            crossterm::event::KeyCode::Char('d') => {
-                match app.inventory_state.selected() {
-                    Some(index) => {
-                        let items = app.engine.game_state.registry.items_owned_by(Owner::Player);
-                        match items.get(index) {
-                            Some(item_id) => match app.game_state.drop_item(*item_id) {
-                                Ok(()) => app.message = "Dropped it.".to_string(),
-                                Err(_) => app.message = "Couldn't drop that.".to_string(),
-                            },
-                            None => app.message = "Nothing Selected".to_string(),
+                match app.engine.apply_action(PlayerAction::Search) {
+                     Ok(update) => {
+                        app.message = update.messages.join("\n");
+                        if let Some(monster_id) = update.pending_combat {
+                            let combat_info = app.engine.current_combat().expect("combat expected");
+                            app.mode = AppMode::Combat(CombatState {
+                                monster_id,
+                                monster_attacks_first: combat_info.monster_attacks_first,
+                                state: CombatMenu::Main,
+                            })
                         }
                     }
-                    None => app.message = "Nothing selected".to_string(),
-                };
+                    Err(e) => app.message = format!("{}", e),
+                }
                 return;
+            }
+
+            crossterm::event::KeyCode::Char('a') => {
+                match app.engine.apply_action(PlayerAction::PickUp) {
+                     Ok(update) => {
+                        app.message = update.messages.join("\n");
+                        if let Some(monster_id) = update.pending_combat {
+                            let combat_info = app.engine.current_combat().expect("combat expected");
+                            app.mode = AppMode::Combat(CombatState {
+                                monster_id,
+                                monster_attacks_first: combat_info.monster_attacks_first,
+                                state: CombatMenu::Main,
+                            })
+                        }
+                    }
+                    Err(e) => app.message = format!("{}", e),
+                }
+
+                return;
+            }
+
+            crossterm::event::KeyCode::Char('d') => {
+                match app.inventory_state.selected() {
+                    Some(index) => match app.engine.apply_action(PlayerAction::Drop(crate::item::ItemId(index))) {
+                        Ok(update) => app.message = update.messages.join("\n"),
+                        Err(e) => app.message = format!("{}", e),
+                    },
+                    None => return,
+                }
             }
             
             crossterm::event::KeyCode::Char(' ') => {
-                app.engine.apply_action(PlayerAction::EndTurn);
+                match app.engine.apply_action(PlayerAction::EndTurn) {
+                    Ok(update) => {
+                        app.message = update.messages.join("\n");
+                        if let Some(monster_id) = update.pending_combat {
+                            let combat_info = app.engine.current_combat().expect("combat expected");
+                            app.mode = AppMode::Combat(CombatState {
+                                monster_id,
+                                monster_attacks_first: combat_info.monster_attacks_first,
+                                state: CombatMenu::Main,
+                            })
+                        }
+                    }
+                    Err(e) => app.message = format!("{}", e),
+                }
                 return;
             }
 
             crossterm::event::KeyCode::Up => {
-                app.engine.apply_action(PlayerAction::Move(Direction::North));
+                match app.engine.apply_action(PlayerAction::Move(Direction::North)) {
+                    Ok(update) => {
+                        app.message = update.messages.join("\n");
+                        if let Some(monster_id) = update.pending_combat {
+                            let combat_info = app.engine.current_combat().expect("combat expected");
+                            app.mode = AppMode::Combat(CombatState {
+                                monster_id,
+                                monster_attacks_first: combat_info.monster_attacks_first,
+                                state: CombatMenu::Main,
+                            })
+                        }
+                    }
+                    Err(e) => app.message = format!("{}", e),
+                }
                 return;
             }
 
             crossterm::event::KeyCode::Down => {
-                app.engine.apply_action(PlayerAction::Move(Direction::South));
+                match app.engine.apply_action(PlayerAction::Move(Direction::South)) {
+                    Ok(update) => {
+                        app.message = update.messages.join("\n");
+                        if let Some(monster_id) = update.pending_combat {
+                            let combat_info = app.engine.current_combat().expect("combat expected");
+                            app.mode = AppMode::Combat(CombatState {
+                                monster_id,
+                                monster_attacks_first: combat_info.monster_attacks_first,
+                                state: CombatMenu::Main,
+                            })
+                        }
+                    }
+                    Err(e) => app.message = format!("{}", e),
+                }
                 return;
             }
 
             crossterm::event::KeyCode::Right => {
-                app.engine.apply_action(PlayerAction::Move(Direction::East));
+                match app.engine.apply_action(PlayerAction::Move(Direction::East)) {
+                    Ok(update) => {
+                        app.message = update.messages.join("\n");
+                        if let Some(monster_id) = update.pending_combat {
+                            let combat_info = app.engine.current_combat().expect("combat expected");
+                            app.mode = AppMode::Combat(CombatState {
+                                monster_id,
+                                monster_attacks_first: combat_info.monster_attacks_first,
+                                state: CombatMenu::Main,
+                            })
+                        }
+                    }
+                    Err(e) => app.message = format!("{}", e),
+                }
                 return;
             }
 
             crossterm::event::KeyCode::Left => {
-                app.engine.apply_action(PlayerAction::Move(Direction::West));
+                match app.engine.apply_action(PlayerAction::Move(Direction::West)) {
+                    Ok(update) => {
+                        app.message = update.messages.join("\n");
+                        if let Some(monster_id) = update.pending_combat {
+                            let combat_info = app.engine.current_combat().expect("combat expected");
+                            app.mode = AppMode::Combat(CombatState {
+                                monster_id,
+                                monster_attacks_first: combat_info.monster_attacks_first,
+                                state: CombatMenu::Main,
+                            })
+                        }
+                    }
+                    Err(e) => app.message = format!("{}", e),
+                }
+                return;
+            }
+            crossterm::event::KeyCode::Char('q') => {
+                app.should_quit = true;
                 return;
             }
 
-            _ => {};
+            _ => {},
         }
     }
     pub fn handle_combat_key(app: &mut Self, key: crossterm::event::KeyEvent) {
-        let (monster_id, monster_attacks_first) = match &app.mode {
-            AppMode::Combat(state) => (state.monster_id, state.monster_attacks_first),
-            AppMode::Exploring => return,
-        };
+        if !app.engine.in_combat() {
+            return
+        }
 
         match key.code {
            crossterm::event::KeyCode::Char('f') => {
-                let (outcome, log) = app.game_state.attack(monster_id, monster_attacks_first);
-                app.message = log.join("\n");
-                match outcome {
-                    crate::combat::CombatOutcome::PlayerWon => {
-                        app.mode = AppMode::Exploring;
+                match app.engine.apply_action(PlayerAction::Attack) {
+                    Ok(update) => {
+                        app.message = update.messages.join("\n");
+                        if update.pending_combat.is_none() {
+                            app.mode = AppMode::Exploring;
+                        }
                     }
-                    crate::combat::CombatOutcome::PlayerDefeated => {
-                        app.mode = AppMode::Exploring;
-                        
-                    }
-                    crate::combat::CombatOutcome::Ongoing => {}
-                    crate::combat::CombatOutcome::PlayerFled => {
-                        app.mode = AppMode::Exploring;
-                    }
+                    Err(e) => app.message = format!("{}", e),
                 }
+                return;
             }
+        
             crossterm::event::KeyCode::Char('r') => {
-                self.engine.apply_action(PlayerAction::Flee);
-                app.mode = AppMode::Exploring;
+                match app.engine.apply_action(PlayerAction::Flee) {
+                    Ok(update) => {
+                        app.message = update.messages.join("\n");
+                        if update.pending_combat.is_none() {
+                            app.mode = AppMode::Exploring;
+                        }
+                    }
+                    Err(e) => app.message = format!("{}", e),
+                }
+                return;
             }
             _ => {}
         }
@@ -185,29 +294,29 @@ impl App {
             ])
             .split(chunks[2]);
 
-        let hp_ratio = (app.game_state.player.health.max(0) as f64) / (app.game_state.player.max_health as f64);
+        let hp_ratio = (app.engine.get_state().player.health.max(0) as f64) / (app.engine.get_state().player.max_health as f64);
         let hp_gauge = ratatui::widgets::Gauge::default()
             .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL))
             .gauge_style(ratatui::style::Style::default().fg(ratatui::style::Color::Red))
             .ratio(hp_ratio)
-            .label(format!("\n  {}/{} HP", app.game_state.player.health, app.game_state.player.max_health));
+            .label(format!("\n  {}/{} HP", app.engine.get_state().player.health, app.engine.get_state().player.max_health));
         frame.render_widget(hp_gauge, chunks[1]);
 
-        let player_stats = format!("\n  strength: {} \n  speed: {}\n  Moves Remaining: {}", app.game_state.player.strength, app.game_state.player.speed, app.game_state.player.moves_remaining);
+        let player_stats = format!("\n  strength: {} \n  speed: {}\n  Moves Remaining: {}", app.engine.get_state().player.strength, app.engine.get_state().player.speed, app.engine.get_state().player.moves_remaining);
         let player_paragraph = ratatui::widgets::Paragraph::new(player_stats);
         frame.render_widget(player_paragraph, columns[1]);
 
        let outer_block = ratatui::widgets::Block::default()
             .borders(ratatui::widgets::Borders::ALL)
-            .title(app.game_state.player.name.to_string());
+            .title(app.engine.get_state().player.name.to_string());
        frame.render_widget(outer_block, area);
     }
 
     pub fn render_inventory(frame: &mut ratatui::Frame, area: ratatui::layout::Rect, app: &mut Self) {
-        let item_ids = app.game_state.registry.items_owned_by(Owner::Player);
+        let item_ids = app.engine.get_state().registry.items_owned_by(Owner::Player);
         let list_items: Vec<ratatui::widgets::ListItem> = item_ids.iter()
             .map(|id| {
-                let name = app.game_state.registry.name_of(*id).unwrap_or("something");
+                let name = app.engine.get_state().registry.name_of(*id).unwrap_or("something");
                 ratatui::widgets::ListItem::new(name.to_string())
             })
             .collect();
@@ -220,14 +329,14 @@ impl App {
     }
 
      fn render_log(frame: &mut ratatui::Frame, area: ratatui::layout::Rect, app: &mut Self) {
-        let monster_names: Vec<String> = app.game_state.monsters.monsters_in(app.game_state.player.current_room)
+        let monster_names: Vec<String> = app.engine.get_state().monsters.monsters_in(app.engine.get_state().player.current_room)
                 .iter().map(|m| m.name.clone()).collect();
         let monster_line = if monster_names.is_empty() {
             String::new()
         } else {
             format!("\nA {} growls, chained in the corner.", monster_names.join(", "))
         };
-        let room = app.game_state.current_room().expect("current room should be valid");
+        let room = app.engine.get_state().current_room().expect("current room should be valid");
         let exits: Vec<String> = room.exits.iter().map(|(d, _)| format!("{:?}", d)).collect();
         let app_log = format!("{}\n", app.message);
         let room_log = format!("Location: {}\nExits: {}\n{}{}\n", room.name, exits.join(", "), app_log, monster_line);
@@ -237,9 +346,8 @@ impl App {
     }
 
        pub fn render_map(frame: &mut ratatui::Frame, area: ratatui::layout::Rect, app: &Self) {
-        let positions = map_state::compute_positions(&app.game_state.house, RoomId(0));
+        let positions = map_state::compute_positions(&app.engine.get_state().house, RoomId(0));
         let (grid_w, grid_h) = map_state::grid_bounds(&positions);
-
         let cell_width = (area.width / grid_w as u16).max(3);
         let cell_height = (area.height / grid_h as u16).max(3);
 
@@ -254,12 +362,12 @@ impl App {
             let highlighted_style = ratatui::style::Style::default().fg(ratatui::style::Color::Yellow);
             let normal_style = ratatui::style::Style::default().fg(ratatui::style::Color::White);
             
-            let style = if *room_id == app.game_state.player.current_room {
+            let style = if *room_id == app.engine.get_state().player.current_room {
                 highlighted_style
             } else {
                 normal_style
             };
-            let room_names = app.game_state.house.room(*room_id).expect("current room should always be valid");
+            let room_names = app.engine.get_state().house.room(*room_id).expect("current room should always be valid");
             let house_map = format!("{}", room_names.name);
             let house_map_paragraph = ratatui::widgets::Paragraph::new(house_map)
                 .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL)
@@ -289,7 +397,7 @@ impl App {
             .split(columns[0]);
 
 
-        let monster = app.game_state.monsters.monster(state.monster_id);
+        let monster = app.engine.get_state().monsters.monster(state.monster_id);
         let (m_name, m_health, m_max) = match monster {
             Ok(m) => (m.name.clone(), m.health.max(0), m.max_health),
             Err(_) => ("???".to_string(), 0, 1),

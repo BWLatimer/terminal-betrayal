@@ -29,8 +29,8 @@ pub fn compute_positions(house: &House, start: RoomId ) -> HashMap<RoomId, (i32,
 }
 
 fn normalize_positions(positions: HashMap<RoomId, (i32, i32)>)-> HashMap<RoomId, (i32, i32)> {
-    let min_y = positions.values().map(|(x, _)| *x).min().unwrap_or(0);
-    let min_x = positions.values().map(|(_, y)| *y).min().unwrap_or(0);
+    let min_x = positions.values().map(|(x, _)| *x).min().unwrap_or(0);
+    let min_y = positions.values().map(|(_, y)| *y).min().unwrap_or(0);
     positions.into_iter()
         .map(|(id, (x, y))| (id, (x - min_x, y - min_y)))
         .collect()

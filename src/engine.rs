@@ -120,13 +120,18 @@ impl GameEngine {
 
     // =====Exploration Actions=====
 
-    fn handle_move(&mut self, dir: Direction) -> Result<GameUpdate, GameError> {
-        let d = match self.state.move_player(dir) {
-            Result::Ok(()) => GameUpdate::empty(),
-            Result::Err(_) => GameUpdate::message(&format!("{}", GameError::InvalidMove)),
-        };
-        &mut self.detect_ambush();
-        Ok(d)
+   fn handle_move(&mut self, dir: Direction) -> Result<GameUpdate, GameError> {
+       match self.state.move_player(dir) {
+            Ok(()) => {
+                // Move succeeded, now check for ambushes
+                let ambush_notices = self.detect_ambush();
+                let pending = self.combat_state.as_ref().map(|c| c.monster_id);
+                Ok(GameUpdate::new(ambush_notices, pending))
+            }
+            Err(_) => {
+                Ok(GameUpdate::message(&format!("{}", GameError::InvalidMove)))
+            }
+        }
     }
 
     fn handle_search(&mut self) -> Result<GameUpdate, GameError> {
@@ -162,8 +167,11 @@ impl GameEngine {
 
     fn handle_end_turn(&mut self) -> Result<GameUpdate, GameError> {
         self.state.end_turn();
-        self.detect_ambush();
-        Ok(GameUpdate::message("You end your turn.")) 
+        let mut notices = vec!["You end your turn.".to_string()];
+        let ambush_notices = self.detect_ambush();
+        notices.extend(ambush_notices);
+        let pending = self.combat_state.as_ref().map(|c| c.monster_id);
+        Ok(GameUpdate::new(notices, pending))
     }
 
     fn handle_engage_monster(&mut self) -> Result<GameUpdate, GameError> {
@@ -175,37 +183,69 @@ impl GameEngine {
                     monster_id, 
                     monster_attacks_first: true,
                 });
-                Ok(GameUpdate::message(&format!("A {} blocks your path!", monster.name)))
+                Ok(GameUpdate::message(&format!("A {} blocks your path", monster.name)))
             },
-            None => Err(GameError::NoMonsterToFight)?,
+            None => Err(GameError::NoMonsterToFight),
         }
     }
 
     // ===== Combat Actions ======
 
     fn handle_attack(&mut self) -> Result<GameUpdate, GameError> {
-        let (outcome, log) = self.state.attack();
-        GameUpdate::message(&log.concat());
-        outcome
+        let combat = self.combat_state.as_ref()
+            .ok_or(GameError::NoMonsterToFight)?;
+
+        let monster_id = combat.monster_id;
+        let monster_attacks_first = combat.monster_attacks_first;
+
+        let (outcome, log) = self.state.attack(monster_id, monster_attacks_first);
+        match outcome {
+            CombatOutcome::PlayerWon => {
+                self.end_combat();
+                Ok(GameUpdate::new(log, None))
+            },
+            CombatOutcome::PlayerDefeated => {
+                self.end_combat();
+                Ok(GameUpdate::new(log, None))
+            },
+            CombatOutcome::Ongoing => {
+                Ok(GameUpdate::new(log, Some(monster_id)))
+            },
+            CombatOutcome::PlayerFled => {
+                self.end_combat();
+                Ok(GameUpdate::new(log, None))
+            },
+        }
     }
 
     fn handle_flee(&mut self) -> Result<GameUpdate, GameError> {
+        let combat = self.combat_state.as_ref()
+            .ok_or(GameError::NoMonsterToFight)?;
+        let monster_id = combat.monster_id;
         let log = self.state.flee(monster_id);
-        GameUpdate::message(&log.concat());
+
+        self.end_combat();
+        Ok(GameUpdate::new(log, None))
     }
 
     // ===== Helper Methods =====
     // add as needed. Examples:
-    fn detect_ambush(&mut self) {
+
+    fn detect_ambush(&mut self) -> Vec< String >  {
         let notices = self.state.process_events();
         if !notices.is_empty() {
-            GameUpdate::message(&notices.concat());
+            self.handle_engage_monster().expect("the hair on the back of your neck stands on end");
         }
         if let Some(monster_id) = self.state.pending_ambush.take() {
             self.combat_state = Some(CombatInfo {
                 monster_id,
-                monster_attacks_first: true,
-            });
-        }
+                monster_attacks_first: true
+            })
+        };
+        notices
+    }
+
+    pub fn get_player_inventory(&self) -> Vec<ItemId> {
+        self.state.registry.items_owned_by(Owner::Player)
     }
 }

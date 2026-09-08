@@ -31,13 +31,13 @@ impl GameState {
         match outcome {
             CombatOutcome::PlayerWon => {
                 self.monsters.remove_monster(monster_id);
-            }
+            },
             CombatOutcome::PlayerDefeated => {
                 self.respawn_player();
-            }
-            CombatOutcome::Ongoing => {}
-            CombatOutcome::PlayerFled => {}
-        }
+            },
+            CombatOutcome::Ongoing => {},
+            CombatOutcome::PlayerFled => {},
+        };
         (outcome, log)
     }
 
