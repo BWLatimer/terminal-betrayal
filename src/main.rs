@@ -1,6 +1,7 @@
-/// src/main.rs
+// src/main.rs
+mod exit;
 mod house;
-use house::{House, RoomId, Direction};
+use house::{House, RoomId, Direction, RoomType, Floor};
 mod player;
 use player::{Player, PlayerConfig};
 mod game_state;
@@ -43,15 +44,18 @@ fn install_panic_hook() {
 
 pub fn build_house() -> House {
     let mut house = House::new();
-    House::add_room(&mut house, RoomId(0), &"Entrance");
-    House::add_room(&mut house, RoomId(1), &"Hallway");
-    House::add_room(&mut house, RoomId(2), &"Kitchen");
-    House::add_room(&mut house, RoomId(3), &"Library");
-    House::add_room(&mut house, RoomId(4), &"Master Bedroom");
-    House::add_room(&mut house, RoomId(5), &"Staircase");
-    House::add_room(&mut house, RoomId(6), &"Basement");
-    House::add_room(&mut house, RoomId(7), &"2nd floor landing");
-    House::add_room(&mut house, RoomId(8), &"Balcony");
+    house.next_room_id = 9;
+    house.entrance_id = RoomId(0);
+
+    House::add_room(&mut house, RoomId(0), &"Entrance", Floor::FirstFloor, (0, 0), RoomType::Split);
+    House::add_room(&mut house, RoomId(1), &"Hallway", Floor::FirstFloor, (1, 0), RoomType::Passage);
+    House::add_room(&mut house, RoomId(2), &"Kitchen", Floor::FirstFloor, (2, 0), RoomType::Corner);
+    House::add_room(&mut house, RoomId(3), &"Library", Floor::SecondFloor, (1, 0), RoomType::Corner);
+    House::add_room(&mut house, RoomId(4), &"Master Bedroom", Floor::SecondFloor, (0, 0), RoomType::Corner);
+    House::add_room(&mut house, RoomId(5), &"Staircase", Floor::FirstFloor, (1, -1), RoomType::Stairway);
+    House::add_room(&mut house, RoomId(6), &"Basement", Floor::Basement, (1, 0), RoomType::Split);
+    House::add_room(&mut house, RoomId(7), &"2nd floor landing", Floor::SecondFloor, (1, -1), RoomType::Split);
+    House::add_room(&mut house, RoomId(8), &"Balcony", Floor::SecondFloor, (0, 1), RoomType::DeadEnd);
 
     House::connect_two_way(&mut house, RoomId(0), Direction::East, RoomId(1))
         .expect("Failed to connect Entrance to Hallway");

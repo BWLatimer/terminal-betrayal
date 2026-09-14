@@ -1,8 +1,9 @@
 //item.rs
 use thiserror::Error;
+use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use crate::house::RoomId;
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Item {
     pub id: ItemId,
     pub name: String, 
@@ -10,7 +11,7 @@ pub struct Item {
     //TODO: eventually - add effects, modifiers, or properties
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ItemId(pub usize);
 
 #[derive(Debug, Error)]

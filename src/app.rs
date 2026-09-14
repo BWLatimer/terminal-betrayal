@@ -339,14 +339,20 @@ impl App {
         let room = app.engine.get_state().current_room().expect("current room should be valid");
         let exits: Vec<String> = room.exits.iter().map(|(d, _)| format!("{:?}", d)).collect();
         let app_log = format!("{}\n", app.message);
-        let room_log = format!("Location: {}\nExits: {}\n{}{}\n", room.name, exits.join(", "), app_log, monster_line);
+        let room_log = format!("Location: {}\nExits: {}\n{}{}\n", room.content.name, exits.join(", "), app_log, monster_line);
         let app_log_paragraph = ratatui::widgets::Paragraph::new(room_log)
             .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL).title("Log:"));
         frame.render_widget(app_log_paragraph, area);
     }
 
-       pub fn render_map(frame: &mut ratatui::Frame, area: ratatui::layout::Rect, app: &Self) {
-        let positions = map_state::compute_positions(&app.engine.get_state().house, RoomId(0));
+    pub fn render_map(frame: &mut ratatui::Frame, area: ratatui::layout::Rect, app: &Self) {
+        let current_floor = app.engine.get_state().house
+            .rooms[&app.engine.get_state().player.current_room].floor;
+        let positions = map_state::compute_positions(
+            &app.engine.get_state().house,
+            RoomId(0),
+            current_floor
+        );
         let (grid_w, grid_h) = map_state::grid_bounds(&positions);
         let cell_width = (area.width / grid_w as u16).max(3);
         let cell_height = (area.height / grid_h as u16).max(3);
@@ -368,7 +374,7 @@ impl App {
                 normal_style
             };
             let room_names = app.engine.get_state().house.room(*room_id).expect("current room should always be valid");
-            let house_map = format!("{}", room_names.name);
+            let house_map = format!("{}", room_names.content.name);
             let house_map_paragraph = ratatui::widgets::Paragraph::new(house_map)
                 .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL)
                 .border_style(style));
